@@ -10,8 +10,8 @@
 
 /**
  * TODO:
- *  - can't hide window, otherwise skip taskbar hint ignored
- *    -> maybe I need to get the surface from the dialog window?
+ *  - make window transparent and black
+ *  - fix dialog positioning (remove deco after dialog pos is determined)
  *  - systemctl seems to be missing a polkit session or something?
  *    -> https://www.reddit.com/r/systemd/comments/1esp7jq/i_hate_systemd_error_when_systemctl_suspend/
  *  - Pretty up main and secondary texts
@@ -29,15 +29,17 @@ int main(int argc, char **argv) {
 
 void on_activate(GtkApplication *app) {
   GtkWidget *window = gtk_application_window_new(app);
+  gtk_window_maximize(GTK_WINDOW(window));
+  gtk_window_set_decorated(GTK_WINDOW(window), false);
+  gtk_window_present(GTK_WINDOW(window));
+  // make transparent using: https://stackoverflow.com/a/3909283/7976097
 
-  // gtk_window_present(GTK_WINDOW(window));
-  // GdkSurface *windowSurface = gtk_native_get_surface(GTK_NATIVE(window));
-  // //! NOTE: https://discourse.gnome.org/t/how-to-hide-app-from-taskbar-in-gtk4/7084/2
-  // if (windowSurface)
-  // {
-  //   gdk_x11_surface_set_skip_taskbar_hint(windowSurface, true);
-  // }
-  // gtk_widget_hide(window);
+  GdkSurface *windowSurface = gtk_native_get_surface(GTK_NATIVE(window));
+  //! NOTE: https://discourse.gnome.org/t/how-to-hide-app-from-taskbar-in-gtk4/7084/2
+  if (windowSurface)
+  {
+    gdk_x11_surface_set_skip_taskbar_hint(windowSurface, true);
+  }
 
   GtkWidget *dialog = gtk_message_dialog_new(
     GTK_WINDOW(window), 0,
@@ -71,13 +73,6 @@ void on_activate(GtkApplication *app) {
 
 
   gtk_widget_show(dialog);
-
-  GdkSurface *windowSurface = gtk_native_get_surface(GTK_NATIVE(dialog));
-  //! NOTE: https://discourse.gnome.org/t/how-to-hide-app-from-taskbar-in-gtk4/7084/2
-  if (windowSurface)
-  {
-    gdk_x11_surface_set_skip_taskbar_hint(windowSurface, true);
-  }
 }
 
 void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
