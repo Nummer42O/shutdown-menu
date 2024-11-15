@@ -3,6 +3,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/x11/gdkx.h>
+#include <gdk/gdk.h>
 // #include <adwaita.h>
 
 #define RESPONSE_POWEROFF 1
@@ -33,6 +34,11 @@ void on_activate(GtkApplication *app) {
   gtk_window_set_decorated(GTK_WINDOW(window), false);
   gtk_window_present(GTK_WINDOW(window));
   // make transparent using: https://stackoverflow.com/a/3909283/7976097
+
+  GtkStyleContext *styleContext = gtk_widget_get_style_context(window);
+  GdkRGBA color;
+  gtk_style_context_get_color(styleContext, &color);
+  printf("Window color: %s\n", gdk_rgba_to_string(&color)); // OOPSIE DAISY, this is a memory leak.
 
   GdkSurface *windowSurface = gtk_native_get_surface(GTK_NATIVE(window));
   //! NOTE: https://discourse.gnome.org/t/how-to-hide-app-from-taskbar-in-gtk4/7084/2
