@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "*.proto": "proto",
+    "ssh_config": "ssh_config",
+    "*.make": "makefile",
+    "*.cmake.in": "cmake",
+    "Dockerfile": "dockerfile",
+    "iostream": "cpp"
+  }
+}
