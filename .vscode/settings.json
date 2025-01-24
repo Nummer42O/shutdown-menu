@@ -5,6 +5,9 @@
     "*.make": "makefile",
     "*.cmake.in": "cmake",
     "Dockerfile": "dockerfile",
-    "iostream": "cpp"
+    "iostream": "cpp",
+    "array": "c",
+    "string": "c",
+    "string_view": "c"
   }
 }

@@ -11,7 +11,14 @@
 
       "program": "${command:cmake.launchTargetPath}",
       "cwd": "${workspaceRoot}",
-      "environment": [],
+      "environment": [
+        // {
+        //   "name": "GTK_DEBUG",
+        //   "value": "all"
+        // }
+      ],
+
+      "preLaunchTask": "Build",
 
       "MIMode": "gdb",
       "setupCommands": [
