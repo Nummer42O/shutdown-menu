@@ -13,10 +13,11 @@ void on_activate(GtkApplication *app, gpointer user_data) {
   gboolean isPowerOff = *(gboolean*)user_data;
 
   GtkWidget *window = gtk_application_window_new(app);
+  gtk_window_set_icon_name(GTK_WINDOW(window), "shutdown-menu");
 
   GtkCssProvider *cssProvider = gtk_css_provider_new();
   gtk_css_provider_load_from_path(
-    cssProvider, "stylesheet.css"
+    cssProvider, STYLESHEET_DIR "stylesheet.css"
   );
   GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(window));
   gtk_style_context_add_provider_for_display(
