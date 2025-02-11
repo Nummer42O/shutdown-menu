@@ -4,22 +4,14 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <gdk/x11/gdkx.h>
 
 
-dialog_response_data_t *create_dialog_response_data(GtkWidget *window, gboolean command_poweroff)
-{
-  dialog_response_data_t *data = malloc(sizeof(dialog_response_data_t));
-  assert(data);
+void on_activate(GtkApplication *app, gpointer user_data) {
+  gboolean isPowerOff = *(gboolean*)user_data;
 
-  data->window = window;
-  data->subcommand = command_poweroff ? SYSTEMCTL_SUBCOMMAND_POWEROFF : SYSTEMCTL_SUBCOMMAND_REBOOT;
-
-  return data;
-}
-
-void on_activate(GtkApplication *app) {
   GtkWidget *window = gtk_application_window_new(app);
 
   GtkCssProvider *cssProvider = gtk_css_provider_new();
@@ -45,7 +37,7 @@ void on_activate(GtkApplication *app) {
     GTK_MESSAGE_DIALOG(dialog),
     "The system will power off automatically in 60 seconds."
   );
-  dialog_countdown_data_t *countdown_data = create_dialog_countdown_data(dialog);
+  dialog_countdown_data_t *countdown_data = create_dialog_countdown_data(dialog, isPowerOff);
   g_timeout_add_full(
     G_PRIORITY_LOW,
     10000, // 10s
@@ -58,23 +50,26 @@ void on_activate(GtkApplication *app) {
     GTK_DIALOG(dialog),
     "Cancel", GTK_RESPONSE_CANCEL
   );
-  gtk_dialog_add_button(
+  GtkWidget *restartButton = gtk_dialog_add_button(
     GTK_DIALOG(dialog),
     "Restart", RESPONSE_RESTART
   );
-  gtk_dialog_add_button(
+  GtkWidget *powerOffButton = gtk_dialog_add_button(
     GTK_DIALOG(dialog),
     "Power Off", RESPONSE_POWEROFF
   );
+  if (isPowerOff)
+    gtk_widget_grab_focus(powerOffButton);
+  else
+    gtk_widget_grab_focus(restartButton);
 
-  //! TODO: actual default via cli
-  dialog_response_data_t *reponse_data = create_dialog_response_data(
-    window, true
+  dialog_response_data_t *response_data = create_dialog_response_data(
+    window, isPowerOff
   );
   g_signal_connect(
     dialog, "response",
     G_CALLBACK(dialog_response),
-    reponse_data
+    response_data
   );
 
 
@@ -98,6 +93,18 @@ void on_activate(GtkApplication *app) {
   // }
 }
 
+
+dialog_response_data_t *create_dialog_response_data(GtkWidget *window, gboolean subcommandIsPowerOff)
+{
+  dialog_response_data_t *data = malloc(sizeof(dialog_response_data_t));
+  assert(data);
+
+  data->window = window;
+  data->subcommandIsPowerOff = subcommandIsPowerOff;
+
+  return data;
+}
+
 void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
 {
   dialog_response_data_t *data = user_data;
@@ -112,7 +119,11 @@ void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
       subcommand = SYSTEMCTL_SUBCOMMAND_POWEROFF;
       break;
     case RESPONSE_TIMEOUT:
-      subcommand = data->subcommand;
+      subcommand = (
+        data->subcommandIsPowerOff ?
+        SYSTEMCTL_SUBCOMMAND_POWEROFF :
+        SYSTEMCTL_SUBCOMMAND_REBOOT
+      );
       break;
     default:
       // nothing
@@ -125,7 +136,8 @@ void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
   free(data);
 }
 
-dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog)
+
+dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog, gboolean isPowerOff)
 {
   dialog_countdown_data_t *data = malloc(sizeof(dialog_countdown_data_t));
   assert(data);
@@ -133,7 +145,7 @@ dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog)
   data->dialog  = dialog;
   data->time    = 50u;
   data->secondary_text_format = (
-    /* TODO */ 1 ?
+    isPowerOff ?
     "The system will power off automatically in %d seconds." :
     "The system will restart automatically in %d seconds."
   );
@@ -146,8 +158,8 @@ void run(const char *subcommand)
   setuid(0);
   setgid(0);
 
-  char *argv[] = {"/usr/bin/systemctl", /*"--dry-run",*/ subcommand, NULL};
-  char *environ[] = { NULL };
+  const char *const argv[] = {"/usr/bin/systemctl", DRY_RUN subcommand, NULL};
+  const char *const environ[] = { NULL };
 
   execve(argv[0], argv, environ);
   perror("execve");

@@ -35,6 +35,10 @@ target_link_libraries(shutdown_menu
   PRIVATE
     ${GTKMM_LIBRARIES}
 )
+target_compile_definitions(shutdown_menu
+  PUBLIC
+    DRY_RUN$<BUILD_INTERFACE:="--dry-run",>
+)
 
 add_subdirectory(src)
 

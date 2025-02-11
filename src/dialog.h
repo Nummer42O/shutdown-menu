@@ -15,18 +15,19 @@
 
 
 void on_activate(
-  GtkApplication *app
+  GtkApplication *app,
+  gpointer user_data
 );
 
 
 typedef struct {
   GtkWidget *window;
-  const char *subcommand;
+  gboolean subcommandIsPowerOff;
 } dialog_response_data_t;
 
 dialog_response_data_t *create_dialog_response_data(
   GtkWidget *window,
-  gboolean command_poweroff
+  gboolean subcommandIsPowerOff
 );
 
 void dialog_response(
@@ -43,7 +44,8 @@ typedef struct {
 } dialog_countdown_data_t;
 
 dialog_countdown_data_t *create_dialog_countdown_data(
-  GtkWidget *dialog
+  GtkWidget *dialog,
+  gboolean isPowerOff
 );
 
 void run(const char *subcommand);
