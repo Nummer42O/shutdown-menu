@@ -100,9 +100,12 @@ def disable(binding: str, purge: bool):
         if (customKeybindSettings.get_string(KEY_BINDING) == binding and
             customKeybindSettings.get_string(KEY_NAME) == SHUTDOWN_MENU_NAME):
             if (purge):
+                action = "Purging";
                 customKeybinds.remove(customKeybind);
             else:
+                action = "Disabling";
                 customKeybindSettings.set_string(KEY_BINDING, "");
+            print(f"{action} custom keybind {customKeybindSettings.props.path}")
             break;
     mediaKeysSettings.set_strv(KEY_CUSTOM_KEYBINDS, customKeybinds);
 
