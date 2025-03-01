@@ -112,7 +112,8 @@ def main():
     parser = argparse.ArgumentParser(
         "enable-shutdown-menu-keybind",
         description="Installes and enables shutdown-menu keybinds or disables installed one.",
-        add_help=False
+        add_help=False,
+        formatter_class=argparse.ArgumentParser
     );
     parser.add_argument(
         "--help", "-h",
