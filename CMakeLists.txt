@@ -51,8 +51,13 @@ target_compile_definitions(shutdown_menu
     STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
     _GNU_SOURCE
 )
-
 add_subdirectory(src)
+
+configure_file(
+  cmake/shutdown-menu-keybind.py.in
+  ${CMAKE_SOURCE_DIR}/shutdown-menu-keybind
+  @ONLY
+)
 
 # install
 install(
@@ -69,14 +74,33 @@ install(
 )
 install(
   FILES stylesheet.css
-  DESTINATION _STYLESHEET_INSTALL_DIR
+  CONFIGURATIONS Release RelWithDebInfo MinSizeRel
+  DESTINATION ${_stylesheet_install_dir}
 )
+# install(
+#   CODE
+#   "if (DEFINED ENV{PKEXEC_UID})
+#     set(UID \$ENV{PKEXEC_UID})
+#   elseif(DEFINED ENV{SUDO_UID})
+#     set(UID \$ENV{SUDO_UID})
+#   else()
+#     message(FATAL_ERROR \"Unable to determine callee UID.\")
+#   endif()
+#   execute_process(
+#     COMMAND sudo -H -u \"#\${UID}\" env DISPLAY=$ENV{DISPLAY} /usr/bin/python3 \"${CMAKE_SOURCE_DIR}/tools/enable-shutdown-menu-keybind.py\" --command \"${CMAKE_INSTALL_FULL_BINDIR}/shutdown_menu\"
+#     RESULT_VARIABLE _ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT
+#   )
+#   if (_ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT GREATER 0)
+#     message(FATAL_ERROR \"Enabling shutdown-menu keybinds failed with exit code \${_ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT}\")
+#   endif()"
+#   CONFIGURATIONS Release RelWithDebInfo MinSizeRel
+# )
 
 # uninstall
 # from: https://gitlab.kitware.com/cmake/community/-/wikis/FAQ#can-i-do-make-uninstall-with-cmake
 if(NOT TARGET uninstall)
   configure_file(
-    ${CMAKE_SOURCE_DIR}/tools/cmake/cmake_uninstall.cmake.in
+    ${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
     ${CMAKE_BINARY_DIR}/cmake_uninstall.cmake
     IMMEDIATE @ONLY
   )
