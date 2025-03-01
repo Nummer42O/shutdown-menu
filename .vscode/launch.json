@@ -2,14 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python Debugger: Current File with Arguments",
+      "type": "debugpy",
+      "request": "launch",
+
+      "program": "shutdown-menu-keybind",
+      "args": "${command:pickArgs}",
+
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
       "name": "Launch shutdown-menu",
       "type": "cppdbg",
       "request": "launch",
-
       "preLaunchTask": "Build",
-
       "program": "${command:cmake.launchTargetPath}",
-      // "args": ["--restart"],
+      "args": [
+        "--restart"
+      ],
       "cwd": "${workspaceRoot}",
       "environment": [
         // {
@@ -17,7 +28,6 @@
         //   "value": "all"
         // }
       ],
-
       "MIMode": "gdb",
       "setupCommands": [
         {

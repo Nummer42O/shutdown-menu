@@ -1,3 +1,6 @@
+.venv/
 build/
+install/
 
-image.png
+shutdown-menu-keybind
+.vscode/settings.json
