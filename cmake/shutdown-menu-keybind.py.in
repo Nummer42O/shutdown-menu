@@ -92,14 +92,19 @@ def enable(command: str, handler: str, binding: str):
     mediaKeysSettings.set_strv(KEY_CUSTOM_KEYBINDS, customKeybinds + [newCustomKeybindSetting.props.path]);
     mediaKeysSettings.sync();
 
-def disable(binding: str):
+def disable(binding: str, purge: bool):
     mediaKeysSettings = Gio.Settings.new(SCHEMA_MEDIA_KEYS);
     customKeybinds = mediaKeysSettings.get_strv(KEY_CUSTOM_KEYBINDS);
     for customKeybind in customKeybinds:
         customKeybindSettings = Gio.Settings.new_with_path(SCHEMA_CUSTOM_KEYBINDS, customKeybind);
         if (customKeybindSettings.get_string(KEY_BINDING) == binding and
             customKeybindSettings.get_string(KEY_NAME) == SHUTDOWN_MENU_NAME):
-            customKeybindSettings.set_string(KEY_BINDING, "");
+            if (purge):
+                customKeybinds.remove(customKeybind);
+            else:
+                customKeybindSettings.set_string(KEY_BINDING, "");
+            break;
+    mediaKeysSettings.set_strv(KEY_CUSTOM_KEYBINDS, customKeybinds);
 
 @dataclasses.dataclass
 class CliArguments:
@@ -107,6 +112,7 @@ class CliArguments:
     command: str;
     binding: str;
     handler: str;
+    purge: bool;
 
 def main():
     parser = argparse.ArgumentParser(
@@ -132,7 +138,7 @@ def main():
         description="Available subcommands",
         required=True,
     );
-    disableSubcommandParserDescr = "Disable the keybind. This merely removes the key sequence from the entry."
+    disableSubcommandParserDescr = "Disable the keybind. This merely removes the key sequence from the entry unless --remove is given."
     disableSubcommandParser = subcommandParsers.add_parser(
         "disable",
         aliases=["d"],
@@ -144,6 +150,12 @@ def main():
         "--help", "-h",
         action="help",
         help=SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT
+    )
+    disableSubcommandParser.add_argument(
+        "--remove", "-r",
+        action="store_true",
+        help="Don't just disable but outright remove the keybind.",
+        dest="purge"
     )
     enableSubcommandParserDrescr = "Enable the keybind. This will add a new entry or modify an existing one. It will furthermore remove the key sequence from other keybinds."
     enableSubcommandParser = subcommandParsers.add_parser(
@@ -175,7 +187,6 @@ def main():
         help=f"How to handle custom keybinds called \"{SHUTDOWN_MENU_NAME}\" that have a binding which is not {SHUTDOWN_MENU_BINDING}.",
         dest="handler"
     )
-    # CONTINUE
     parser.epilog = (
         "enable subcommand:\n"  + enableSubcommandParser.format_help() + "\n" +
         "disable subcommand:\n" + disableSubcommandParser.format_usage()
@@ -185,7 +196,7 @@ def main():
     arguments: CliArguments = parser.parse_args();
 
     if (arguments.subcommand == "disable"):
-        disable();
+        disable(arguments.binding, arguments.purge);
     else:
         enable(arguments.command, arguments.handler, arguments.binding);
 
