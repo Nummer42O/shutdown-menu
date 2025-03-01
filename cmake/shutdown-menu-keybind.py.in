@@ -1,0 +1,194 @@
+#!/usr/bin/python3
+# PYTHON_ARGCOMPLETE_OK
+
+from gi.repository import Gio #type: ignore
+import dataclasses
+import argparse, argcomplete
+import sys
+import re
+
+
+KEY_CUSTOM_KEYBINDS     = "custom-keybindings";
+KEY_BINDING             = "binding";
+KEY_NAME                = "name";
+KEY_COMMAND             = "command";
+
+SCHEMA_MEDIA_KEYS       = "org.gnome.settings-daemon.plugins.media-keys";
+SCHEMA_WM_KEYBINDINGS   = "org.gnome.desktop.wm.keybindings";
+SCHEMA_CUSTOM_KEYBINDS  = SCHEMA_MEDIA_KEYS + ".custom-keybinding"; # NOTE: yes here it is singular, not plural - idk why.
+
+SHUTDOWN_MENU_BINDING   = "<Alt>F3";
+SHUTDOWN_MENU_NAME      = "Shutdown Menu"
+SHUTDOWN_MENU_COMMAND   = "@_shutdown_command_location@";
+CUSTOM_KEYBIND_PATTERN  = "/" + SCHEMA_MEDIA_KEYS.replace('.', '/') + "/custom-keybindings/custom{}/";
+
+HANDLER_OPTION_ABORT    = "abort";
+HANDLER_OPTION_DISABLE  = "disable";
+HANDLER_OPTION_OVERRIDE = "override"
+
+SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT = "Show this help message and exit."
+
+
+def searchCustomKeys(customKeybinds: list[str], handler: str, binding: str) -> Gio.Settings | str:
+    customKeybindSettingsToBeDisabled: list[Gio.Settings] = [];
+    for customKeybind in customKeybinds:
+        customKeybindSetting = Gio.Settings.new_with_path(SCHEMA_CUSTOM_KEYBINDS, customKeybind);
+
+        customKeybindSettingName    = customKeybindSetting.get_string(KEY_NAME);
+        customKeybindSettingBinding = customKeybindSetting.get_string(KEY_BINDING);
+        if (customKeybindSettingName == SHUTDOWN_MENU_NAME):
+            if (customKeybindSettingBinding == binding):
+                return customKeybindSetting;
+            else:
+                if (handler == HANDLER_OPTION_ABORT):
+                    print(f"Got custom keybind \"{customKeybindSettingName}\" with binding {customKeybindSettingBinding}. Aborting.", file=sys.stderr)
+                    sys.exit(1);
+                elif (handler == HANDLER_OPTION_DISABLE):
+                    customKeybindSettingsToBeDisabled.append(customKeybindSetting);
+                else: # HANDLER_OPTION_OVERRIDE
+                    return customKeybindSetting
+        elif (customKeybindSetting.get_string(KEY_BINDING) == binding):
+            customKeybindSettingsToBeDisabled.append(customKeybindSetting);
+
+    for customKeybindSetting in customKeybindSettingsToBeDisabled:
+        print(f"Disabling custom keybind '{customKeybindSetting.get_string(KEY_NAME)}'.");
+        customKeybindSetting.set_string(KEY_BINDING, "");
+
+    pattern = re.compile(CUSTOM_KEYBIND_PATTERN.format("([0-9]+)"));
+    newCustomKeybindNr = max((int(pattern.match(customKeybind).group(1)) for customKeybind in customKeybinds)) + 1;
+    return CUSTOM_KEYBIND_PATTERN.format(newCustomKeybindNr);
+
+def disableWindowMakerKeybinds():
+    wmKeybindsSettings = Gio.Settings.new(SCHEMA_WM_KEYBINDINGS);
+    wmKeybinds = wmKeybindsSettings.props.settings_schema.list_keys();
+    for wmKeybind in wmKeybinds:
+        wmKeybindKey = wmKeybindsSettings.props.settings_schema.get_key(wmKeybind);
+        bindings = wmKeybindsSettings.get_strv(wmKeybind);
+
+        if (SHUTDOWN_MENU_BINDING in bindings):
+            print(f"Removing keybind {SHUTDOWN_MENU_BINDING} from {wmKeybindKey.get_name()}.");
+            bindings.remove(SHUTDOWN_MENU_BINDING);
+            wmKeybindsSettings.set_strv(wmKeybind, bindings);
+
+def enable(command: str, handler: str, binding: str):
+    mediaKeysSettings = Gio.Settings.new(SCHEMA_MEDIA_KEYS);
+    customKeybinds = mediaKeysSettings.get_strv(KEY_CUSTOM_KEYBINDS);
+    result = searchCustomKeys(customKeybinds, handler);
+    if (not isinstance(result, Gio.Settings)):
+        action = "Adding";
+        disableWindowMakerKeybinds();
+        newCustomKeybindSetting = Gio.Settings.new_with_path(SCHEMA_CUSTOM_KEYBINDS, result);
+    else:
+        action = "Updating";
+        newCustomKeybindSetting = result;
+
+    print(f"{action} keybind {newCustomKeybindSetting.props.path}")
+    newCustomKeybindSetting.set_string(KEY_NAME, SHUTDOWN_MENU_NAME);
+    newCustomKeybindSetting.set_string(KEY_COMMAND, command);
+    newCustomKeybindSetting.set_string(KEY_BINDING, binding);
+    newCustomKeybindSetting.sync();
+
+    mediaKeysSettings = Gio.Settings.new(SCHEMA_MEDIA_KEYS);
+    mediaKeysSettings.set_strv(KEY_CUSTOM_KEYBINDS, customKeybinds + [newCustomKeybindSetting.props.path]);
+    mediaKeysSettings.sync();
+
+def disable(binding: str):
+    mediaKeysSettings = Gio.Settings.new(SCHEMA_MEDIA_KEYS);
+    customKeybinds = mediaKeysSettings.get_strv(KEY_CUSTOM_KEYBINDS);
+    for customKeybind in customKeybinds:
+        customKeybindSettings = Gio.Settings.new_with_path(SCHEMA_CUSTOM_KEYBINDS, customKeybind);
+        if (customKeybindSettings.get_string(KEY_BINDING) == binding and
+            customKeybindSettings.get_string(KEY_NAME) == SHUTDOWN_MENU_NAME):
+            customKeybindSettings.set_string(KEY_BINDING, "");
+
+@dataclasses.dataclass
+class CliArguments:
+    subcommand: str;
+    command: str;
+    binding: str;
+    handler: str;
+
+def main():
+    parser = argparse.ArgumentParser(
+        "enable-shutdown-menu-keybind",
+        description="Installes and enables shutdown-menu keybinds or disables installed one.",
+        add_help=False
+    );
+    parser.add_argument(
+        "--help", "-h",
+        action="help",
+        help=SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT
+    )
+    parser.add_argument(
+        "--binding",
+        action="store",
+        type=str,
+        default=SHUTDOWN_MENU_BINDING,
+        help="Alternative shutdown menu binding. Must be compatible with gsettings(1).",
+        dest="binding"
+    );
+    subcommandParsers = parser.add_subparsers(
+        dest="subcommand",
+        description="Available subcommands",
+        required=True,
+    );
+    disableSubcommandParserDescr = "Disable the keybind. This merely removes the key sequence from the entry."
+    disableSubcommandParser = subcommandParsers.add_parser(
+        "disable",
+        aliases=["d"],
+        add_help=False,
+        help=disableSubcommandParserDescr,
+        description=disableSubcommandParserDescr
+    );
+    disableSubcommandParser.add_argument(
+        "--help", "-h",
+        action="help",
+        help=SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT
+    )
+    enableSubcommandParserDrescr = "Enable the keybind. This will add a new entry or modify an existing one. It will furthermore remove the key sequence from other keybinds."
+    enableSubcommandParser = subcommandParsers.add_parser(
+        "enable",
+        aliases=["e"],
+        add_help=False,
+        help=enableSubcommandParserDrescr,
+        description=enableSubcommandParserDrescr
+    )
+    enableSubcommandParser.add_argument(
+        "--help", "-h",
+        action="help",
+        help=SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT
+    )
+    enableSubcommandParser.add_argument(
+        "--command",
+        action="store",
+        type=str,
+        default=SHUTDOWN_MENU_COMMAND,
+        help="Alternative, absolute path to the shutdown-menu executable.",
+        dest="command"
+    );
+    enableSubcommandParser.add_argument(
+        "--problem-handler",
+        action="store",
+        type=str,
+        choices=[HANDLER_OPTION_DISABLE, HANDLER_OPTION_OVERRIDE, HANDLER_OPTION_ABORT],
+        default=HANDLER_OPTION_ABORT,
+        help=f"How to handle custom keybinds called \"{SHUTDOWN_MENU_NAME}\" that have a binding which is not {SHUTDOWN_MENU_BINDING}.",
+        dest="handler"
+    )
+    # CONTINUE
+    parser.epilog = (
+        "enable subcommand:\n"  + enableSubcommandParser.format_help() + "\n" +
+        "disable subcommand:\n" + disableSubcommandParser.format_usage()
+    )
+
+    argcomplete.autocomplete(parser);
+    arguments: CliArguments = parser.parse_args();
+
+    if (arguments.subcommand == "disable"):
+        disable();
+    else:
+        enable(arguments.command, arguments.handler, arguments.binding);
+
+
+if (__name__ == "__main__"):
+    main();

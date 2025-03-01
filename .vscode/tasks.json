@@ -3,40 +3,65 @@
 	"tasks": [
     {
       "type": "cmake",
-      "label": "CMake: build",
-      "detail": "CMake template build task.",
-
+      "label": "Build",
+      "detail": "CMake build task.",
       "command": "build",
-
-      "presentation": {
-        "echo": true,
-        "reveal": "silent",
-        "focus": false,
-        "close": false,
-        "revealProblems": "onProblem",
-        "clear": true
-      },
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "silent",
+        "showReuseMessage": false,
+        "clear": true
       },
       "problemMatcher": []
     },
     {
       "type": "shell",
-      "label": "CMake: clean",
-      "detail": "Clean the build output directory.",
-
-      "command": ["rm", "-rf", "${workspaceFolder}/build"],
-
+      "label": "Install",
+      "detail": "CMake install task.",
+      "command": "/usr/bin/pkexec",
+      "args": [
+        "${config:cmake.cmakePath}",
+        "--build",
+        "${command:cmake.buildDirectory}",
+        "--config",
+        "${command:cmake.buildType}",
+        "--target",
+        "install",
+        "--"
+      ],
       "presentation": {
         "echo": false,
         "reveal": "silent",
-        "focus": false,
-        "close": true,
-        "revealProblems": "never"
+        "showReuseMessage": false,
+        "clear": true
       },
-      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Uninstall",
+      "detail": "CMake uninstall task.",
+      "command": "/usr/bin/pkexec",
+      "args": [
+        "${config:cmake.cmakePath}",
+        "--build",
+        "${command:cmake.buildDirectory}",
+        "--config",
+        "${command:cmake.buildType}",
+        "--target",
+        "uninstall",
+        "--"
+      ],
+      "presentation": {
+        "echo": false,
+        "reveal": "silent",
+        "showReuseMessage": false,
+        "clear": true
+      },
       "problemMatcher": []
     }
   ]
