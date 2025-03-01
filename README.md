@@ -29,4 +29,4 @@ To use it, execute the following from within the repository folder:
 sudo cmake --build ./build --target uninstall
 ```
 
-`shutdown-menu-keybind disable` can be used to disable the previously installed command.
+`shutdown-menu-keybind disable` can be used to disable (or remove) the previously installed keybind.
