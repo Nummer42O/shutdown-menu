@@ -6,8 +6,33 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <linux/version.h>
 #include <gdk/x11/gdkx.h>
 
+
+#if LINUX_VERSION_MAJOR <= 3 && LINUX_VERSION_PATCHLEVEL < 1
+#define HANDLE_SETPID(command)                \
+  if ((command) == -1)                        \
+    print_error("setpid");
+#else
+#define HANDLE_SETPID(command)                \
+  int result;                                 \
+  do                                          \
+  {                                           \
+    result = (command);                       \
+  } while (result == -1 && errno == EAGAIN);  \
+  if (result == -1)                           \
+    print_error("setpid");
+#endif
+
+
+void print_error(const char *fkt)
+{
+  fprintf(
+    stderr, "Error %s in %s: %s\n",
+    strerrorname_np(errno), fkt, strerrordesc_np(errno)
+  );
+}
 
 void on_activate(GtkApplication *app, gpointer user_data) {
   gboolean isPowerOff = *(gboolean*)user_data;
@@ -156,13 +181,14 @@ dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog, gboolea
 
 void run(const char *subcommand)
 {
-  setuid(0);
-  setgid(0);
+  HANDLE_SETPID(setuid(0));
+  if (setgid(0) == -1)
+    print_error("setgid");
 
   const char *const argv[] = {"/usr/bin/systemctl", DRY_RUN subcommand, NULL};
   const char *const environ[] = { NULL };
 
-  execve(argv[0], argv, environ);
+  execve(argv[0], (char *const *)argv, (char *const *)environ);
   perror("execve");
 }
 
