@@ -7,12 +7,20 @@ project(shutdown-menu
 )
 
 # variables
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED True)
 
 include(GNUInstallDirs)
 
-set(_STYLESHEET_INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/shutdown-menu")
+set(_stylesheet_install_dir "${CMAKE_INSTALL_DATADIR}/shutdown-menu")
+set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown_menu")
+
+option(DRY_RUN "Wether to compile shutdown-menu steril, meaning without effect." OFF)
+if(${DRY_RUN})
+  set(_dry_run_definition "DRY_RUN=\"--dry-run\", ")
+else()
+  set(_dry_run_definition "DRY_RUN=")
+endif()
 
 # include
 find_package(PkgConfig 0.29 REQUIRED)
@@ -39,8 +47,9 @@ target_link_libraries(shutdown_menu
 )
 target_compile_definitions(shutdown_menu
   PUBLIC
-    DRY_RUN$<BUILD_INTERFACE:="--dry-run",>
-    STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_STYLESHEET_INSTALL_DIR}>/"
+    ${_dry_run_definition}
+    STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
+    _GNU_SOURCE
 )
 
 add_subdirectory(src)
@@ -48,11 +57,13 @@ add_subdirectory(src)
 # install
 install(
   TARGETS shutdown_menu
+  CONFIGURATIONS Release RelWithDebInfo MinSizeRel
   RUNTIME
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 install(
   FILES icon.png
+  CONFIGURATIONS Release RelWithDebInfo MinSizeRel
   DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/48x48/apps/
   RENAME shutdown-menu.png
 )
