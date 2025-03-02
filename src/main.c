@@ -1,13 +1,6 @@
 #include "dialog.h"
 
 
-/**
- * TODO:
- *  - fix dialog positioning (remove deco after dialog pos is determined)
- *  - Add option for default
-*/
-
-
 int main(int argc, char *argv[]) {
   GtkApplication *app = gtk_application_new(
     "github.Nummer42O.shutdown-dialog",

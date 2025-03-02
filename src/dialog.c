@@ -59,11 +59,11 @@ void on_activate(GtkApplication *app, gpointer user_data) {
   gtk_widget_set_name(window, "background-window");
   gtk_widget_set_name(dialog, "shutdown-dialog");
 
+  dialog_countdown_data_t *countdown_data = create_dialog_countdown_data(dialog, isPowerOff);
   gtk_message_dialog_format_secondary_text(
     GTK_MESSAGE_DIALOG(dialog),
-    "The system will power off automatically in 60 seconds."
+    countdown_data->secondary_text_format, 60
   );
-  dialog_countdown_data_t *countdown_data = create_dialog_countdown_data(dialog, isPowerOff);
   g_timeout_add_full(
     G_PRIORITY_LOW,
     10000, // 10s
