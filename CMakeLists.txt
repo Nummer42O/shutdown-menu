@@ -3,6 +3,7 @@
 # required setup
 cmake_minimum_required(VERSION 3.16)
 project(shutdown-menu
+  VERSION 0.1.1
   LANGUAGES C
 )
 
