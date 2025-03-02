@@ -2,10 +2,12 @@
 # PYTHON_ARGCOMPLETE_OK
 
 from gi.repository import Gio #type: ignore
+import logging
 import typing
 import argparse, argcomplete
 import sys
 import re
+
 
 class MenuKeybinder:
     # settings schema keys
@@ -17,17 +19,19 @@ class MenuKeybinder:
     # settings schema/paths
     SCHEMA_MEDIA_KEYS       = "org.gnome.settings-daemon.plugins.media-keys";
     SCHEMA_WM_KEYBINDINGS   = "org.gnome.desktop.wm.keybindings";
-    # yes here it is singular, not plural - idk why.
+    # NOTE: yes here it is singular, not plural - idk why.
     SCHEMA_CUSTOM_KEYBINDS  = SCHEMA_MEDIA_KEYS + ".custom-keybinding";
     CUSTOM_KEYBIND_PATTERN  = "/" + SCHEMA_MEDIA_KEYS.replace('.', '/') + "/custom-keybindings/custom{}/";
 
     # default values
     DEFAULT_BINDING         = "<Alt>F3";
     DEFAULT_NAME            = "Shutdown Menu"
+    # NOTE: this gets set by cmake
     DEFAULT_COMMAND         = "@_shutdown_command_location@";
 
     # argparse stuff
     HandlerOptions          = typing.Literal["abort", "disable", "override"];
+    LogLevels               = typing.Literal["debug", "info", "warning", "error", "critical"];
     SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT = "Show this help message and exit."
 
     # cli argument declarations
@@ -36,19 +40,26 @@ class MenuKeybinder:
     entryCommand: str;
     entryBinding: str;
     entryName: str
-    # TODO: log
+    logLevel: LogLevels;
     # enable
     handler: HandlerOptions;
     # disable
     purge: bool;
 
+    log: logging.Logger
+
+    def __init__(self):
+        self.log = logging.getLogger("MenuKeybinder");
+        self.log.addHandler(logging.StreamHandler());
+
     @classmethod
     def createArgumentParser(cls) -> argparse.ArgumentParser:
+        # main parser
         parser = argparse.ArgumentParser(
             "shutdown-menu-keybind",
             description="Installs and enables shutdown-menu keybinds or disables installed one.",
             add_help=False,
-            formatter_class=argparse.ArgumentParser
+            formatter_class=argparse.RawDescriptionHelpFormatter
         );
         parser.add_argument(
             "--help", "-h",
@@ -57,33 +68,50 @@ class MenuKeybinder:
         )
         parser.add_argument(
             "--binding",
+            metavar="BINDING",
             action="store",
             type=str,
             default=cls.DEFAULT_BINDING,
             help="Alternative shutdown menu binding. Must be compatible with gsettings(1).",
-            dest="binding"
+            dest="entryBinding"
         );
         parser.add_argument(
             "--command",
+            metavar="COMMAND",
             action="store",
             type=str,
             default=cls.DEFAULT_COMMAND,
             help="Alternate, absolute path to the shutdown-menu executable.",
-            dest="command"
+            dest="entryCommand"
         );
         parser.add_argument(
             "--name",
+            metavar="NAME",
             action="store",
             type=str,
             default=cls.DEFAULT_NAME,
             help="Alternate name for the shutdown-menu keybind.",
-            dest="command"
+            dest="entryName"
         );
+        parser.add_argument(
+            "--log-level", "-l",
+            # metavar="SEVERITY",
+            action="store",
+            type=str,
+            choices=typing.get_args(cls.LogLevels),
+            default="info",
+            help="Set the logging verbosity.",
+            dest="logLevel"
+        )
+
+        # subparsers
         subcommandParsers = parser.add_subparsers(
             dest="subcommand",
             description="Available subcommands",
             required=True,
+            metavar="<subcommand>"
         );
+        # subparser: disable
         disableSubcommandParserDescr = "Disable the keybind. This merely removes the key sequence from the entry unless --remove is given."
         disableSubcommandParser = subcommandParsers.add_parser(
             "disable",
@@ -98,11 +126,12 @@ class MenuKeybinder:
             help=cls.SHOW_HELP_STRING_BECAUSE_THE_DEFAULT_AINT_QUITE_RIGHT
         );
         disableSubcommandParser.add_argument(
-            "--remove", "-r",
+            "--purge", "-p",
             action="store_true",
             help="Don't just disable but outright remove the keybind.",
             dest="purge"
         );
+        # subparser: enable
         enableSubcommandParserDrescr = "Enable the keybind. This will add a new entry or modify an existing one. It will furthermore remove the key sequence from other keybinds."
         enableSubcommandParser = subcommandParsers.add_parser(
             "enable",
@@ -118,17 +147,19 @@ class MenuKeybinder:
         );
         handlerOptions = typing.get_args(cls.HandlerOptions);
         enableSubcommandParser.add_argument(
-            "--problem-handler",
+            "--problem-handler", "-p",
             action="store",
             type=str,
             choices=handlerOptions,
             default=handlerOptions[0],
-            help=f"How to handle custom keybinds with a mathing name that have a non-matching binding.",
+            help=f"How to handle custom keybinds with a matching name that have a non-matching binding.",
             dest="handler"
         );
+
+        # epilog for subparser help
         parser.epilog = (
             "enable subcommand:\n"  + enableSubcommandParser.format_help() + "\n" +
-            "disable subcommand:\n" + disableSubcommandParser.format_usage()
+            "disable subcommand:\n" + disableSubcommandParser.format_help()
         );
 
         return parser;
@@ -136,6 +167,7 @@ class MenuKeybinder:
     def _searchCustomKeys(self, customKeybinds: list[str]) -> Gio.Settings | str | None:
         customKeybindSettingsToBeDisabled: list[Gio.Settings] = [];
         for customKeybind in customKeybinds:
+            self.log.debug(f"Custom key bind path: {customKeybind}")
             customKeybindSetting = Gio.Settings.new_with_path(self.SCHEMA_CUSTOM_KEYBINDS, customKeybind);
 
             customKeybindSettingName    = customKeybindSetting.get_string(self.KEY_NAME);
@@ -145,7 +177,7 @@ class MenuKeybinder:
                     return customKeybindSetting;
                 else:
                     if (self.handler == "abort"):
-                        print(f"Got custom keybind \"{customKeybindSettingName}\" with binding {customKeybindSettingBinding}. Aborting.", file=sys.stderr)
+                        self.log.error(f"Got custom keybind \"{customKeybindSettingName}\" with binding {customKeybindSettingBinding}. Aborting.",)
                         return None;
                     elif (self.handler == "disable"):
                         customKeybindSettingsToBeDisabled.append(customKeybindSetting);
@@ -155,7 +187,7 @@ class MenuKeybinder:
                 customKeybindSettingsToBeDisabled.append(customKeybindSetting);
 
         for customKeybindSetting in customKeybindSettingsToBeDisabled:
-            print(f"Disabling custom keybind '{customKeybindSetting.get_string(self.KEY_NAME)}'.");
+            self.log.debug(f"Disabling custom keybind '{customKeybindSetting.get_string(self.KEY_NAME)}'.");
             customKeybindSetting.set_string(self.KEY_BINDING, "");
 
         pattern = re.compile(self.CUSTOM_KEYBIND_PATTERN.format("([0-9]+)"));
@@ -166,11 +198,12 @@ class MenuKeybinder:
         wmKeybindsSettings = Gio.Settings.new(self.SCHEMA_WM_KEYBINDINGS);
         wmKeybinds = wmKeybindsSettings.props.settings_schema.list_keys();
         for wmKeybind in wmKeybinds:
+            self.log.debug(f"WM key bind key: {wmKeybind}")
             wmKeybindKey = wmKeybindsSettings.props.settings_schema.get_key(wmKeybind);
             bindings = wmKeybindsSettings.get_strv(wmKeybind);
 
             if (self.entryBinding in bindings):
-                print(f"Removing keybind {self.entryBinding} from {wmKeybindKey.get_name()}.");
+                self.log.debug(f"Removing keybind {self.entryBinding} from {wmKeybindKey.get_name()}.");
                 bindings.remove(self.entryBinding);
                 wmKeybindsSettings.set_strv(wmKeybind, bindings);
 
@@ -188,7 +221,7 @@ class MenuKeybinder:
             action = "Updating";
             newCustomKeybindSetting = result;
 
-        print(f"{action} keybind {newCustomKeybindSetting.props.path}")
+        self.log.info(f"{action} keybind {newCustomKeybindSetting.props.path}")
         newCustomKeybindSetting.set_string(self.KEY_NAME, self.entryName);
         newCustomKeybindSetting.set_string(self.KEY_COMMAND, self.entryCommand);
         newCustomKeybindSetting.set_string(self.KEY_BINDING, self.entryBinding);
@@ -198,24 +231,30 @@ class MenuKeybinder:
         mediaKeysSettings.set_strv(self.KEY_CUSTOM_KEYBINDS, customKeybinds + [newCustomKeybindSetting.props.path]);
         mediaKeysSettings.sync();
 
+        return 0;
+
     def disable(self, mediaKeysSettings: Gio.Settings) -> int:
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
         customKeybinds = mediaKeysSettings.get_strv(self.KEY_CUSTOM_KEYBINDS);
         for customKeybind in customKeybinds:
+            self.log.debug(f"Custom key bind path: {customKeybind}")
             customKeybindSettings = Gio.Settings.new_with_path(self.SCHEMA_CUSTOM_KEYBINDS, customKeybind);
-            if (customKeybindSettings.get_string(self.KEY_BINDING) == self.entryBinding and
-                customKeybindSettings.get_string(self.KEY_NAME) == self.entryName):
+            if (customKeybindSettings.get_string(self.KEY_COMMAND) == self.entryCommand):
                 if (self.purge):
                     action = "Purging";
                     customKeybinds.remove(customKeybind);
                 else:
                     action = "Disabling";
                     customKeybindSettings.set_string(self.KEY_BINDING, "");
-                print(f"{action} custom keybind {customKeybindSettings.props.path}")
+                self.log.info(f"{action} custom keybind {customKeybind}")
                 break;
         mediaKeysSettings.set_strv(self.KEY_CUSTOM_KEYBINDS, customKeybinds);
 
+        return 0;
+
     def run(self) -> int:
+        self.log.setLevel(self.logLevel.upper())
+
         subcommand: typing.Callable[[Gio.Settings], int] = getattr(self, self.subcommand);
 
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
