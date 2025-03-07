@@ -72,7 +72,7 @@ class MenuKeybinder:
             action="store",
             type=str,
             default=cls.DEFAULT_BINDING,
-            help="Alternative shutdown menu binding. Must be compatible with gsettings(1).",
+            help="Alternative shutdown menu binding. See https://docs.gtk.org/gtk4/func.accelerator_parse.html for the binding format.",
             dest="entryBinding"
         );
         parser.add_argument(

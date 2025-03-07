@@ -31,7 +31,7 @@ dialog_response_data_t *create_dialog_response_data(
 );
 
 void dialog_response(
-  GtkDialog* self,
+  GtkDialog *self,
   gint response_id,
   gpointer user_data
 );
