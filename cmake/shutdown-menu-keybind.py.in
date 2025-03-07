@@ -165,6 +165,9 @@ class MenuKeybinder:
         return parser;
 
     def _searchCustomKeys(self, customKeybinds: list[str]) -> Gio.Settings | str | None:
+        if (not customKeybinds):
+            return self.CUSTOM_KEYBIND_PATTERN.format(0);
+
         customKeybindSettingsToBeDisabled: list[Gio.Settings] = [];
         for customKeybind in customKeybinds:
             self.log.debug(f"Custom key bind path: {customKeybind}")
