@@ -56,6 +56,22 @@ void on_activate(GtkApplication *app, gpointer user_data) {
     "Power Off."
   );
 
+  GSimpleAction *escapeAcceleratorAction = g_simple_action_new("escAcc", NULL);
+  g_signal_connect(
+    escapeAcceleratorAction, "activate",
+    G_CALLBACK(accelerator_escape_action),
+    dialog
+  );
+  g_action_map_add_action(
+    G_ACTION_MAP(app), //! TODO: is this fine?
+    G_ACTION(escapeAcceleratorAction)
+  );
+  const char *accelerators[] = {"Escape", NULL};
+  gtk_application_set_accels_for_action(
+    app,
+    "app.escAcc", accelerators
+  );
+
   gtk_widget_set_name(window, "background-window");
   gtk_widget_set_name(dialog, "shutdown-dialog");
 
@@ -160,6 +176,12 @@ void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
   if (subcommand)
     run(subcommand);
   free(data);
+}
+
+void accelerator_escape_action(GSimpleAction *, GVariant *, gpointer userData)
+{
+  GtkDialog *dialog = userData;
+  gtk_dialog_response(dialog, GTK_RESPONSE_CANCEL);
 }
 
 

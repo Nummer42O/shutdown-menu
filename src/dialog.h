@@ -37,6 +37,13 @@ void dialog_response(
 );
 
 
+void accelerator_escape_action(
+  GSimpleAction *,
+  GVariant *,
+  gpointer userData
+);
+
+
 typedef struct {
   GtkWidget *dialog;
   unsigned int time;
