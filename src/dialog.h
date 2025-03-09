@@ -37,6 +37,18 @@ void dialog_response(
 );
 
 
+void accelerator_escape_action(
+  GSimpleAction *,
+  GVariant *,
+  gpointer userData
+);
+
+void state_flags_changed(
+  GtkWidget *dialog,
+  GtkStateFlags previousFlags,
+  gpointer
+);
+
 typedef struct {
   GtkWidget *dialog;
   unsigned int time;

@@ -35,7 +35,7 @@ void print_error(const char *fkt)
 }
 
 void on_activate(GtkApplication *app, gpointer user_data) {
-  gboolean isPowerOff = *(gboolean*)user_data;
+  gboolean isPowerOff = *(gboolean *)user_data;
 
   GtkWidget *window = gtk_application_window_new(app);
   gtk_window_set_icon_name(GTK_WINDOW(window), "shutdown-menu");
@@ -54,6 +54,27 @@ void on_activate(GtkApplication *app, gpointer user_data) {
     GTK_WINDOW(window), 0,
     GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
     "Power Off."
+  );
+  g_signal_connect(
+    dialog, "state-flags-changed",
+    G_CALLBACK(state_flags_changed),
+    NULL
+  );
+
+  GSimpleAction *escapeAcceleratorAction = g_simple_action_new("escAcc", NULL);
+  g_signal_connect(
+    escapeAcceleratorAction, "activate",
+    G_CALLBACK(accelerator_escape_action),
+    dialog
+  );
+  g_action_map_add_action(
+    G_ACTION_MAP(app), //! TODO: is this fine?
+    G_ACTION(escapeAcceleratorAction)
+  );
+  const char *accelerators[] = {"Escape", NULL};
+  gtk_application_set_accels_for_action(
+    app,
+    "app.escAcc", accelerators
   );
 
   gtk_widget_set_name(window, "background-window");
@@ -131,28 +152,28 @@ dialog_response_data_t *create_dialog_response_data(GtkWidget *window, gboolean 
   return data;
 }
 
-void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
+void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)
 {
   dialog_response_data_t *data = user_data;
 
   const char *subcommand = NULL;
   switch (response_id)
   {
-    case RESPONSE_RESTART:
-      subcommand = SYSTEMCTL_SUBCOMMAND_REBOOT;
-      break;
-    case RESPONSE_POWEROFF:
-      subcommand = SYSTEMCTL_SUBCOMMAND_POWEROFF;
-      break;
-    case RESPONSE_TIMEOUT:
-      subcommand = (
-        data->subcommandIsPowerOff ?
-        SYSTEMCTL_SUBCOMMAND_POWEROFF :
-        SYSTEMCTL_SUBCOMMAND_REBOOT
+  case RESPONSE_RESTART:
+    subcommand = SYSTEMCTL_SUBCOMMAND_REBOOT;
+    break;
+  case RESPONSE_POWEROFF:
+    subcommand = SYSTEMCTL_SUBCOMMAND_POWEROFF;
+    break;
+  case RESPONSE_TIMEOUT:
+    subcommand = (
+      data->subcommandIsPowerOff ?
+      SYSTEMCTL_SUBCOMMAND_POWEROFF :
+      SYSTEMCTL_SUBCOMMAND_REBOOT
       );
-      break;
-    default:
-      // nothing
+    break;
+  default:
+    // nothing
   }
 
   gtk_window_destroy(GTK_WINDOW(data->window));
@@ -162,19 +183,33 @@ void dialog_response(GtkDialog* self, gint response_id, gpointer user_data)
   free(data);
 }
 
+void accelerator_escape_action(GSimpleAction *, GVariant *, gpointer userData)
+{
+  GtkDialog *dialog = userData;
+  gtk_dialog_response(dialog, GTK_RESPONSE_CANCEL);
+}
+
+void state_flags_changed(GtkWidget *dialog, GtkStateFlags previousFlags, gpointer)
+{
+  GtkStateFlags flags = gtk_widget_get_state_flags(dialog);
+  if (!(flags & GTK_STATE_FLAG_FOCUS_WITHIN) &&
+      previousFlags & GTK_STATE_FLAG_FOCUS_WITHIN)
+    gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+}
+
 
 dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog, gboolean isPowerOff)
 {
   dialog_countdown_data_t *data = malloc(sizeof(dialog_countdown_data_t));
   assert(data);
 
-  data->dialog  = dialog;
-  data->time    = 50u;
+  data->dialog = dialog;
+  data->time = 50u;
   data->secondary_text_format = (
     isPowerOff ?
     "The system will power off automatically in %d seconds." :
     "The system will restart automatically in %d seconds."
-  );
+    );
 
   return data;
 }
@@ -186,7 +221,7 @@ void run(const char *subcommand)
     print_error("setgid");
 
   const char *const argv[] = {"/usr/bin/systemctl", DRY_RUN subcommand, NULL};
-  const char *const environ[] = { NULL };
+  const char *const environ[] = {NULL};
 
   execve(argv[0], (char *const *)argv, (char *const *)environ);
   perror("execve");

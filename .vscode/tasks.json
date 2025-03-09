@@ -5,7 +5,9 @@
       "type": "cmake",
       "label": "Build",
       "detail": "CMake build task.",
+
       "command": "build",
+
       "group": {
         "kind": "build",
         "isDefault": true
@@ -22,17 +24,14 @@
       "type": "shell",
       "label": "Install",
       "detail": "CMake install task.",
-      "command": "/usr/bin/pkexec",
+
+      "command": "/usr/bin/bash",
       "args": [
+        "${workspaceFolder}/.vscode/install.bash",
         "${config:cmake.cmakePath}",
-        "--build",
-        "${command:cmake.buildDirectory}",
-        "--config",
-        "${command:cmake.buildType}",
-        "--target",
-        "install",
-        "--"
+        "${workspaceFolder}"
       ],
+
       "presentation": {
         "echo": false,
         "reveal": "silent",
@@ -45,17 +44,19 @@
       "type": "shell",
       "label": "Uninstall",
       "detail": "CMake uninstall task.",
+
       "command": "/usr/bin/pkexec",
       "args": [
         "${config:cmake.cmakePath}",
         "--build",
-        "${command:cmake.buildDirectory}",
+        "${workspaceFolder}/build_install",
         "--config",
-        "${command:cmake.buildType}",
+        "Release",
         "--target",
         "uninstall",
         "--"
       ],
+
       "presentation": {
         "echo": false,
         "reveal": "silent",
