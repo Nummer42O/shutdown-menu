@@ -43,6 +43,11 @@ void accelerator_escape_action(
   gpointer userData
 );
 
+void state_flags_changed(
+  GtkWidget *dialog,
+  GtkStateFlags previousFlags,
+  gpointer
+);
 
 typedef struct {
   GtkWidget *dialog;
