@@ -19,10 +19,14 @@
       "preLaunchTask": "Build",
       "program": "${command:cmake.launchTargetPath}",
       "args": [
-        "--restart"
+        // "--restart"
       ],
       "cwd": "${workspaceRoot}",
       "environment": [
+        {
+          "name": "GSETTINGS_SCHEMA_DIR",
+          "value": "${command:cmake.buildDirectory}"
+        }
         // {
         //   "name": "GTK_DEBUG",
         //   "value": "all"

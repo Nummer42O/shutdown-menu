@@ -21,6 +21,7 @@ class MenuKeybinder:
     SCHEMA_WM_KEYBINDINGS   = "org.gnome.desktop.wm.keybindings";
     # NOTE: yes here it is singular, not plural - idk why.
     SCHEMA_CUSTOM_KEYBINDS  = SCHEMA_MEDIA_KEYS + ".custom-keybinding";
+    # TODO: how is this path custom to the calling user? investigate!
     CUSTOM_KEYBIND_PATTERN  = "/" + SCHEMA_MEDIA_KEYS.replace('.', '/') + "/custom-keybindings/custom{}/";
 
     # default values
