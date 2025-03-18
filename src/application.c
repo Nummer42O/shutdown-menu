@@ -6,40 +6,12 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <linux/version.h>
 #include <gdk/x11/gdkx.h>
 
 
 #define RESPONSE_POWEROFF 1
 #define RESPONSE_RESTART  2
 #define RESPONSE_TIMEOUT  3
-
-#define SYSTEMCTL_SUBCOMMAND_REBOOT   "reboot"
-#define SYSTEMCTL_SUBCOMMAND_POWEROFF "poweroff"
-
-
-#if LINUX_VERSION_MAJOR <= 3 && LINUX_VERSION_PATCHLEVEL < 1
-#define HANDLE_SETPID(command)                \
-  if ((command) == -1)                        \
-    print_error("setpid");
-#else
-#define HANDLE_SETPID(command)                \
-  int result;                                 \
-  do                                          \
-  {                                           \
-    result = (command);                       \
-  } while (result == -1 && errno == EAGAIN);  \
-  if (result == -1)                           \
-    print_error("setpid");
-#endif
-
-static void print_error(const char *fkt)
-{
-  fprintf(
-    stderr, "Error %s in %s: %s\n",
-    strerrorname_np(errno), fkt, strerrordesc_np(errno)
-  );
-}
 
 
 struct _ShutdownMenuApplication
@@ -55,18 +27,23 @@ struct _ShutdownMenuApplication
   unsigned int  countdownTimerTime,
                 countdownTimerInterval;
   int64_t       gracePeriod;
+
+  enum ShutdownMenuFinalAction *finalAction;
 };
 G_DEFINE_TYPE(ShutdownMenuApplication, shutdown_menu_application, GTK_TYPE_APPLICATION);
 
 
-ShutdownMenuApplication *shutdown_menu_application_new()
+ShutdownMenuApplication *shutdown_menu_application_new(enum ShutdownMenuFinalAction *finalAction)
 {
-  return g_object_new(
+  ShutdownMenuApplication *app = g_object_new(
     SHUTDOWN_MENU_TYPE_APPLICATION,
     "application-id", APPLICATION_ID,
     "flags", G_APPLICATION_FLAGS_NONE,
     NULL
   );
+  app->finalAction = finalAction;
+
+  return app;
 }
 
 void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
@@ -252,37 +229,33 @@ static void shutdown_menu_application_init(ShutdownMenuApplication *app)
   );
   //! TODO: from settings
   app->countdownTimerTime = 60u;
-  app->countdownTimerInterval = 10u;
+  app->countdownTimerInterval = 1u;
 }
 
 static void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)
 {
   ShutdownMenuApplication *app = user_data;
 
-  const char *subcommand = NULL;
   switch (response_id)
   {
   case RESPONSE_RESTART:
-    subcommand = SYSTEMCTL_SUBCOMMAND_REBOOT;
+    *(app->finalAction) = SHUTDOWN_MENU_FINAL_ACTION_RESTART;
     break;
   case RESPONSE_POWEROFF:
-    subcommand = SYSTEMCTL_SUBCOMMAND_POWEROFF;
+    *(app->finalAction) = SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF;
     break;
   case RESPONSE_TIMEOUT:
-    subcommand = (
+  *(app->finalAction) = (
       app->subcommandIsPowerOff ?
-      SYSTEMCTL_SUBCOMMAND_POWEROFF :
-      SYSTEMCTL_SUBCOMMAND_REBOOT
+      SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF :
+      SHUTDOWN_MENU_FINAL_ACTION_RESTART
       );
     break;
   default:
-    // nothing
+    *(app->finalAction) = SHUTDOWN_MENU_FINAL_ACTION_NOTHING;
   }
 
   gtk_window_destroy(GTK_WINDOW(app->window));
-
-  if (subcommand)
-    run(subcommand);
 }
 
 static void accelerator_escape_action(GSimpleAction *, GVariant *, gpointer userData)
@@ -300,24 +273,11 @@ static void state_flags_changed(GtkWidget *dialog, GtkStateFlags previousFlags, 
 }
 
 
-static void run(const char *subcommand)
-{
-  HANDLE_SETPID(setuid(0));
-  if (setgid(0) == -1)
-    print_error("setgid");
-
-  const char *const argv[] = {"/usr/bin/systemctl", DRY_RUN subcommand, NULL};
-  const char *const environ[] = {NULL};
-
-  execve(argv[0], (char *const *)argv, (char *const *)environ);
-  perror("execve");
-}
-
 static gboolean dialog_countdown(gpointer data)
 {
   ShutdownMenuApplication *app = data;
 
-  app->countdownTimerTime -= 10u;
+  app->countdownTimerTime -= app->countdownTimerInterval;
   if (app->countdownTimerTime <= 0u)
     return false;
 

@@ -26,7 +26,15 @@ G_DECLARE_FINAL_TYPE(
     ShutdownMenuApplication             \
   ))
 
-ShutdownMenuApplication *shutdown_menu_application_new();
+enum ShutdownMenuFinalAction
+{
+  SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF,
+  SHUTDOWN_MENU_FINAL_ACTION_RESTART,
+  SHUTDOWN_MENU_FINAL_ACTION_NOTHING
+};
+ShutdownMenuApplication *shutdown_menu_application_new(
+  enum ShutdownMenuFinalAction *finalAction
+);
 void shutdown_menu_add_cli_arguments(
   ShutdownMenuApplication *app
 );
@@ -52,10 +60,6 @@ static void state_flags_changed(
   gpointer
 );
 
-
-static void run(
-  const char *subcommand
-);
 
 static gboolean dialog_countdown(
   gpointer data
