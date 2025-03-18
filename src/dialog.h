@@ -1,6 +1,8 @@
 #ifndef DIALOG_H
 #define DIALOG_H
 
+#include "application.h"
+
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 
@@ -13,37 +15,37 @@
 #define SYSTEMCTL_SUBCOMMAND_REBOOT   "reboot"
 #define SYSTEMCTL_SUBCOMMAND_POWEROFF "poweroff"
 
+G_BEGIN_DECLS
 
-void on_activate(
-  GtkApplication *app,
-  gpointer user_data
+GtkMessageDialog *shutdown_menu_messagedialog_new(
+  ShutdownMenuApplication *app,
+  gboolean defaultIsPowerOff
 );
-
 
 typedef struct {
   GtkWidget *window;
   gboolean subcommandIsPowerOff;
 } dialog_response_data_t;
 
-dialog_response_data_t *create_dialog_response_data(
+static dialog_response_data_t *create_dialog_response_data(
   GtkWidget *window,
   gboolean subcommandIsPowerOff
 );
 
-void dialog_response(
+static void dialog_response(
   GtkDialog *self,
   gint response_id,
   gpointer user_data
 );
 
 
-void accelerator_escape_action(
+static void accelerator_escape_action(
   GSimpleAction *,
   GVariant *,
   gpointer userData
 );
 
-void state_flags_changed(
+static void state_flags_changed(
   GtkWidget *dialog,
   GtkStateFlags previousFlags,
   gpointer
@@ -55,20 +57,22 @@ typedef struct {
   const char *secondary_text_format;
 } dialog_countdown_data_t;
 
-dialog_countdown_data_t *create_dialog_countdown_data(
+static dialog_countdown_data_t *create_dialog_countdown_data(
   GtkWidget *dialog,
   gboolean isPowerOff
 );
 
-void run(const char *subcommand);
+static void run(
+  const char *subcommand
+);
 
-gboolean dialog_countdown(
+static gboolean dialog_countdown(
   gpointer data
 );
 
-void dialog_countdown_destroy(
+static void dialog_countdown_destroy(
   gpointer data
 );
 
-
+G_END_DECLS
 #endif //!defined(DIALOG_H)

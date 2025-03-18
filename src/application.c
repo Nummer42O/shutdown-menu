@@ -47,13 +47,14 @@ struct _ShutdownMenuApplication
   GApplication parent_instance;
 
   GSettings *settings;
-  struct CliArguments {
-    gboolean isPowerOff;
-    int64_t gracePeriod;
-  } cliArguments;
-
   GtkWidget *window,
             *dialog;
+
+  gboolean      subcommandIsPowerOff;
+  char         *secondaryTextFormat;
+  unsigned int  countdownTimerTime,
+                countdownTimerInterval;
+  int64_t       gracePeriod;
 };
 G_DEFINE_TYPE(ShutdownMenuApplication, shutdown_menu_application, GTK_TYPE_APPLICATION);
 
@@ -70,8 +71,8 @@ ShutdownMenuApplication *shutdown_menu_application_new()
 
 void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
 {
-  app->cliArguments.isPowerOff = true;
-  app->cliArguments.gracePeriod = 0l;
+  app->subcommandIsPowerOff = true;
+  app->gracePeriod = 0l;
   GOptionEntry additional_options[] = {
     {
       .long_name    = "restart",
@@ -79,7 +80,7 @@ void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
       .flags        = G_OPTION_FLAG_REVERSE,
 
       .arg          = G_OPTION_ARG_NONE,
-      .arg_data     = &(app->cliArguments.isPowerOff),
+      .arg_data     = &(app->subcommandIsPowerOff),
 
       .description  = "Restart instead of powering off."
     },
@@ -89,7 +90,7 @@ void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
       .flags        = G_OPTION_FLAG_NONE,
 
       .arg          = G_OPTION_ARG_INT64,
-      .arg_data     = &(app->cliArguments.gracePeriod),
+      .arg_data     = &(app->gracePeriod),
 
       .description  = "The ammount of seconds the applications waits before enforcing the selected option."
     },
@@ -133,14 +134,17 @@ static void shutdown_menu_application_activate(GApplication *app)
   smApp->dialog = gtk_message_dialog_new(
     GTK_WINDOW(smApp->window), 0,
     GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
-    //! TODO: differentiate here
-    "Power Off."
+    (
+      smApp->subcommandIsPowerOff ?
+      "Power Off" :
+      "Restart"
+    )
   );
-  g_signal_connect(
-    smApp->dialog, "state-flags-changed",
-    G_CALLBACK(state_flags_changed),
-    NULL
-  );
+  // g_signal_connect(
+  //   smApp->dialog, "state-flags-changed",
+  //   G_CALLBACK(state_flags_changed),
+  //   NULL
+  // );
 
   GSimpleAction *escapeAcceleratorAction = g_simple_action_new("escAcc", NULL);
   g_signal_connect(
@@ -161,17 +165,23 @@ static void shutdown_menu_application_activate(GApplication *app)
   gtk_widget_set_name(smApp->window, "background-window");
   gtk_widget_set_name(smApp->dialog, "shutdown-dialog");
 
-  dialog_countdown_data_t *countdown_data = create_dialog_countdown_data(smApp->dialog, smApp->cliArguments.isPowerOff);
+  g_timeout_add_full(
+    G_PRIORITY_DEFAULT,
+    smApp->countdownTimerTime * 1000,
+    dialog_timeout,
+    smApp,
+    NULL
+  );
   gtk_message_dialog_format_secondary_text(
     GTK_MESSAGE_DIALOG(smApp->dialog),
-    countdown_data->secondary_text_format, 60
+    smApp->secondaryTextFormat, smApp->countdownTimerTime
   );
   g_timeout_add_full(
     G_PRIORITY_LOW,
-    10000, // 10s
+    smApp->countdownTimerInterval * 1000,
     dialog_countdown,
-    countdown_data,
-    dialog_countdown_destroy
+    smApp,
+    NULL
   );
 
   gtk_dialog_add_button(
@@ -186,18 +196,15 @@ static void shutdown_menu_application_activate(GApplication *app)
     GTK_DIALOG(smApp->dialog),
     "Power Off", RESPONSE_POWEROFF
   );
-  if (smApp->cliArguments.isPowerOff)
+  if (smApp->subcommandIsPowerOff)
     gtk_widget_grab_focus(powerOffButton);
   else
     gtk_widget_grab_focus(restartButton);
 
-  dialog_response_data_t *response_data = create_dialog_response_data(
-    smApp->window, smApp->cliArguments.isPowerOff
-  );
   g_signal_connect(
     GTK_DIALOG(smApp->dialog), "response",
     G_CALLBACK(dialog_response),
-    response_data
+    smApp
   );
 
 
@@ -237,22 +244,20 @@ static void shutdown_menu_application_init(ShutdownMenuApplication *app)
   g_assert(GTK_IS_APPLICATION(app));
 
   // app->settings = g_settings_new(APPLICATION_ID);
-}
 
-static dialog_response_data_t *create_dialog_response_data(GtkWidget *window, gboolean subcommandIsPowerOff)
-{
-  dialog_response_data_t *data = malloc(sizeof(dialog_response_data_t));
-  assert(data);
-
-  data->window = window;
-  data->subcommandIsPowerOff = subcommandIsPowerOff;
-
-  return data;
+  app->secondaryTextFormat = (
+    app->subcommandIsPowerOff ?
+    "The system will power off automatically in %d seconds." :
+    "The system will restart automatically in %d seconds."
+  );
+  //! TODO: from settings
+  app->countdownTimerTime = 60u;
+  app->countdownTimerInterval = 10u;
 }
 
 static void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)
 {
-  dialog_response_data_t *data = user_data;
+  ShutdownMenuApplication *app = user_data;
 
   const char *subcommand = NULL;
   switch (response_id)
@@ -265,7 +270,7 @@ static void dialog_response(GtkDialog *self, gint response_id, gpointer user_dat
     break;
   case RESPONSE_TIMEOUT:
     subcommand = (
-      data->subcommandIsPowerOff ?
+      app->subcommandIsPowerOff ?
       SYSTEMCTL_SUBCOMMAND_POWEROFF :
       SYSTEMCTL_SUBCOMMAND_REBOOT
       );
@@ -274,11 +279,10 @@ static void dialog_response(GtkDialog *self, gint response_id, gpointer user_dat
     // nothing
   }
 
-  gtk_window_destroy(GTK_WINDOW(data->window));
+  gtk_window_destroy(GTK_WINDOW(app->window));
 
   if (subcommand)
     run(subcommand);
-  free(data);
 }
 
 static void accelerator_escape_action(GSimpleAction *, GVariant *, gpointer userData)
@@ -296,22 +300,6 @@ static void state_flags_changed(GtkWidget *dialog, GtkStateFlags previousFlags, 
 }
 
 
-static dialog_countdown_data_t *create_dialog_countdown_data(GtkWidget *dialog, gboolean isPowerOff)
-{
-  dialog_countdown_data_t *data = malloc(sizeof(dialog_countdown_data_t));
-  assert(data);
-
-  data->dialog = dialog;
-  data->time = 50u;
-  data->secondary_text_format = (
-    isPowerOff ?
-    "The system will power off automatically in %d seconds." :
-    "The system will restart automatically in %d seconds."
-    );
-
-  return data;
-}
-
 static void run(const char *subcommand)
 {
   HANDLE_SETPID(setuid(0));
@@ -327,28 +315,28 @@ static void run(const char *subcommand)
 
 static gboolean dialog_countdown(gpointer data)
 {
-  dialog_countdown_data_t *countdown_data = data;
+  ShutdownMenuApplication *app = data;
 
-  if (countdown_data->time == 0u)
+  app->countdownTimerTime -= 10u;
+  if (app->countdownTimerTime <= 0u)
     return false;
 
   gtk_message_dialog_format_secondary_text(
-    GTK_MESSAGE_DIALOG(countdown_data->dialog),
-    countdown_data->secondary_text_format, countdown_data->time
+    GTK_MESSAGE_DIALOG(app->dialog),
+    app->secondaryTextFormat, app->countdownTimerTime
   );
-  countdown_data->time -= 10u;
 
   return true;
 }
 
-static void dialog_countdown_destroy(gpointer data)
+static gboolean dialog_timeout(gpointer data)
 {
-  dialog_countdown_data_t *countdown_data = data;
+  ShutdownMenuApplication *app = data;
 
   gtk_dialog_response(
-    GTK_DIALOG(countdown_data->dialog),
+    GTK_DIALOG(app->dialog),
     RESPONSE_TIMEOUT
   );
 
-  free(countdown_data);
+  return false;
 }
