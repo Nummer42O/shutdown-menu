@@ -3,7 +3,7 @@
 # required setup
 cmake_minimum_required(VERSION 3.16)
 project(shutdown-menu
-  VERSION 0.2.0
+  VERSION 0.2.1
   LANGUAGES C
 )
 
@@ -15,6 +15,8 @@ include(GNUInstallDirs)
 
 set(_stylesheet_install_dir "${CMAKE_INSTALL_DATADIR}/shutdown-menu")
 set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown_menu")
+set(_application_id "github.Nummer42O.shutdown-dialog")
+string(REPLACE "." "/" _application_id_path ".${_application_id}")
 
 option(DRY_RUN "Wether to compile shutdown-menu steril, meaning without effect." OFF)
 if(${DRY_RUN})
@@ -50,10 +52,12 @@ target_compile_definitions(shutdown_menu
   PUBLIC
     ${_dry_run_definition}
     STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
+    APPLICATION_ID="${_application_id}"
     _GNU_SOURCE
 )
 add_subdirectory(src)
 
+# configure
 configure_file(
   cmake/shutdown-menu-keybind.py.in
   ${CMAKE_SOURCE_DIR}/shutdown-menu-keybind
