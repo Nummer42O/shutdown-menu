@@ -228,7 +228,7 @@ static void shutdown_menu_application_init(ShutdownMenuApplication *app)
   );
   //! TODO: from settings
   app->countdownTimerTime = 60u;
-  app->countdownTimerInterval = 1u;
+  app->countdownTimerInterval = 10u;
 }
 
 static void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)
