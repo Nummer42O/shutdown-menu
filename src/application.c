@@ -107,7 +107,6 @@ static void shutdown_menu_application_activate(GApplication *app)
     display, GTK_STYLE_PROVIDER(cssProvider),
     GTK_STYLE_PROVIDER_PRIORITY_USER
   );
-
   smApp->dialog = gtk_message_dialog_new(
     GTK_WINDOW(smApp->window), 0,
     GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
@@ -117,11 +116,11 @@ static void shutdown_menu_application_activate(GApplication *app)
       "Restart"
     )
   );
-  // g_signal_connect(
-  //   smApp->dialog, "state-flags-changed",
-  //   G_CALLBACK(state_flags_changed),
-  //   NULL
-  // );
+  g_signal_connect(
+    smApp->window, "state-flags-changed",
+    G_CALLBACK(state_flags_changed),
+    smApp->dialog
+  );
 
   GSimpleAction *escapeAcceleratorAction = g_simple_action_new("escAcc", NULL);
   g_signal_connect(
@@ -264,11 +263,12 @@ static void accelerator_escape_action(GSimpleAction *, GVariant *, gpointer user
   gtk_dialog_response(dialog, GTK_RESPONSE_CANCEL);
 }
 
-static void state_flags_changed(GtkWidget *dialog, GtkStateFlags previousFlags, gpointer)
+static void state_flags_changed(GtkWidget *window, GtkStateFlags, gpointer userData)
 {
-  GtkStateFlags flags = gtk_widget_get_state_flags(dialog);
-  if (!(flags & GTK_STATE_FLAG_FOCUS_WITHIN) &&
-      previousFlags & GTK_STATE_FLAG_FOCUS_WITHIN)
+  GtkStateFlags flags = gtk_widget_get_state_flags(window);
+  GtkWidget *dialog = userData;
+
+  if (flags & GTK_STATE_FLAG_ACTIVE)
     gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
 }
 

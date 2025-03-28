@@ -55,9 +55,9 @@ static void accelerator_escape_action(
 );
 
 static void state_flags_changed(
-  GtkWidget *dialog,
-  GtkStateFlags previousFlags,
-  gpointer
+  GtkWidget *window,
+  GtkStateFlags,
+  gpointer userData
 );
 
 
