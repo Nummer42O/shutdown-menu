@@ -39,6 +39,10 @@ void shutdown_menu_add_cli_arguments(
   ShutdownMenuApplication *app
 );
 
+static void shutdown_menu_application_activate(
+  GApplication *app
+);
+
 G_END_DECLS
 
 static void dialog_response(

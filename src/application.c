@@ -89,13 +89,40 @@ static void shutdown_menu_application_dispose(GObject *object)
   G_OBJECT_CLASS(shutdown_menu_application_parent_class)->dispose(object);
 }
 
+static void shutdown_menu_application_class_init(ShutdownMenuApplicationClass *_class)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS(_class);
+  object_class->dispose = shutdown_menu_application_dispose;
+
+  GApplicationClass *app_class = G_APPLICATION_CLASS(_class);
+  app_class->activate = shutdown_menu_application_activate;
+}
+
+static void shutdown_menu_application_init(ShutdownMenuApplication *app)
+{
+  g_assert(GTK_IS_APPLICATION(app));
+
+  // app->settings = g_settings_new(APPLICATION_ID);
+
+  //! TODO: from settings
+  app->countdownTimerTime = 60u;
+  app->countdownTimerInterval = 10u;
+}
+
 static void shutdown_menu_application_activate(GApplication *app)
 {
   g_assert(GTK_IS_APPLICATION(app));
 
   ShutdownMenuApplication *smApp = SHUTDOWN_MENU_APPLICATION(app);
+
+  smApp->secondaryTextFormat = (
+    smApp->subcommandIsPowerOff ?
+    "The system will power off automatically in %d seconds." :
+    "The system will restart automatically in %d seconds."
+  );
+
   if (!smApp->window)
-    smApp->window = gtk_application_window_new(GTK_APPLICATION(app));
+    smApp->window = gtk_application_window_new(GTK_APPLICATION(smApp));
   gtk_window_set_icon_name(GTK_WINDOW(smApp->window), "shutdown-menu");
 
   GtkCssProvider *cssProvider = gtk_css_provider_new();
@@ -204,31 +231,6 @@ static void shutdown_menu_application_activate(GApplication *app)
   // }
 
   gtk_window_present(GTK_WINDOW(smApp->window));
-}
-
-static void shutdown_menu_application_class_init(ShutdownMenuApplicationClass *_class)
-{
-  GObjectClass *object_class = G_OBJECT_CLASS(_class);
-  object_class->dispose = shutdown_menu_application_dispose;
-
-  GApplicationClass *app_class = G_APPLICATION_CLASS(_class);
-  app_class->activate = shutdown_menu_application_activate;
-}
-
-static void shutdown_menu_application_init(ShutdownMenuApplication *app)
-{
-  g_assert(GTK_IS_APPLICATION(app));
-
-  // app->settings = g_settings_new(APPLICATION_ID);
-
-  app->secondaryTextFormat = (
-    app->subcommandIsPowerOff ?
-    "The system will power off automatically in %d seconds." :
-    "The system will restart automatically in %d seconds."
-  );
-  //! TODO: from settings
-  app->countdownTimerTime = 60u;
-  app->countdownTimerInterval = 10u;
 }
 
 static void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)
