@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <string.h>
 
+#ifdef GDK_WINDOWING_X11
 #include <gdk/x11/gdkx.h>
+#endif
 
 
 #define RESPONSE_POWEROFF 1
@@ -217,12 +219,14 @@ static void shutdown_menu_application_activate(GApplication *app)
   gtk_window_present(GTK_WINDOW(smApp->window));
 
   //! NOTE: https://discourse.gnome.org/t/how-to-hide-app-from-taskbar-in-gtk4/7084/2
+#ifdef GDK_WINDOWING_X11
   GdkSurface *windowSurface;
   windowSurface = gtk_native_get_surface(GTK_NATIVE(smApp->window));
-  if (windowSurface)
+  if (windowSurface && GDK_IS_X11_SURFACE(windowSurface))
   {
     gdk_x11_surface_set_skip_taskbar_hint(windowSurface, true);
   }
+#endif
   //! NOTE: does not seem to have an effect
   // windowSurface = gtk_native_get_surface(GTK_NATIVE(dialog));
   // if (windowSurface)

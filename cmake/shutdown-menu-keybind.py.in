@@ -4,7 +4,11 @@
 from gi.repository import Gio #type: ignore
 import logging
 import typing
-import argparse, argcomplete
+import argparse
+try:
+    import argcomplete
+except ImportError:  # argcomplete is optional
+    argcomplete = None
 import sys
 import re
 
@@ -21,7 +25,7 @@ class MenuKeybinder:
     SCHEMA_WM_KEYBINDINGS   = "org.gnome.desktop.wm.keybindings";
     # NOTE: yes here it is singular, not plural - idk why.
     SCHEMA_CUSTOM_KEYBINDS  = SCHEMA_MEDIA_KEYS + ".custom-keybinding";
-    # TODO: how is this path custom to the calling user? investigate!
+    # NOTE: dconf is per-user; the path itself contains no user name.
     CUSTOM_KEYBIND_PATTERN  = "/" + SCHEMA_MEDIA_KEYS.replace('.', '/') + "/custom-keybindings/custom{}/";
 
     # default values
@@ -166,6 +170,9 @@ class MenuKeybinder:
         return parser;
 
     def _searchCustomKeys(self, customKeybinds: list[str]) -> Gio.Settings | str | None:
+        # dconf lists can contain duplicate paths (e.g. after an older version
+        # of this script ran multiple times). Normalize them first.
+        customKeybinds = list(dict.fromkeys(customKeybinds))
         if (not customKeybinds):
             return self.CUSTOM_KEYBIND_PATTERN.format(0);
 
@@ -195,7 +202,14 @@ class MenuKeybinder:
             customKeybindSetting.set_string(self.KEY_BINDING, "");
 
         pattern = re.compile(self.CUSTOM_KEYBIND_PATTERN.format("([0-9]+)"));
-        newCustomKeybindNr = max((int(pattern.match(customKeybind).group(1)) for customKeybind in customKeybinds)) + 1;
+        usedNumbers = []
+        for customKeybind in customKeybinds:
+            match = pattern.match(customKeybind)
+            if (match):
+                usedNumbers.append(int(match.group(1)))
+            else:
+                self.log.warning(f"Ignoring custom keybind with unexpected path: {customKeybind}")
+        newCustomKeybindNr = max(usedNumbers, default=-1) + 1;
         return self.CUSTOM_KEYBIND_PATTERN.format(newCustomKeybindNr);
 
     def _disableWindowMakerKeybinds(self):
@@ -213,7 +227,7 @@ class MenuKeybinder:
 
     def enable(self, mediaKeysSettings: Gio.Settings) -> int:
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
-        customKeybinds = mediaKeysSettings.get_strv(self.KEY_CUSTOM_KEYBINDS);
+        customKeybinds = list(dict.fromkeys(mediaKeysSettings.get_strv(self.KEY_CUSTOM_KEYBINDS)));
         result = self._searchCustomKeys(customKeybinds);
         if (result is None):
             return 1;
@@ -231,15 +245,21 @@ class MenuKeybinder:
         newCustomKeybindSetting.set_string(self.KEY_BINDING, self.entryBinding);
         newCustomKeybindSetting.sync();
 
+        # Only append a new path. If an existing entry is being updated, it is
+        # already part of custom-keybindings and must not be duplicated.
+        path = newCustomKeybindSetting.props.path;
+        if (path not in customKeybinds):
+            customKeybinds.append(path);
+
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
-        mediaKeysSettings.set_strv(self.KEY_CUSTOM_KEYBINDS, customKeybinds + [newCustomKeybindSetting.props.path]);
+        mediaKeysSettings.set_strv(self.KEY_CUSTOM_KEYBINDS, customKeybinds);
         mediaKeysSettings.sync();
 
         return 0;
 
     def disable(self, mediaKeysSettings: Gio.Settings) -> int:
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
-        customKeybinds = mediaKeysSettings.get_strv(self.KEY_CUSTOM_KEYBINDS);
+        customKeybinds = list(dict.fromkeys(mediaKeysSettings.get_strv(self.KEY_CUSTOM_KEYBINDS)));
         for customKeybind in customKeybinds:
             self.log.debug(f"Custom key bind path: {customKeybind}")
             customKeybindSettings = Gio.Settings.new_with_path(self.SCHEMA_CUSTOM_KEYBINDS, customKeybind);
@@ -259,7 +279,16 @@ class MenuKeybinder:
     def run(self) -> int:
         self.log.setLevel(self.logLevel.upper())
 
-        subcommand: typing.Callable[[Gio.Settings], int] = getattr(self, self.subcommand);
+        canonicalSubcommand = {
+            "enable": "enable",
+            "e": "enable",
+            "disable": "disable",
+            "d": "disable",
+        }.get(self.subcommand)
+        if (canonicalSubcommand is None):
+            self.log.error(f"Unknown subcommand: {self.subcommand}")
+            return 2
+        subcommand: typing.Callable[[Gio.Settings], int] = getattr(self, canonicalSubcommand);
 
         mediaKeysSettings = Gio.Settings.new(self.SCHEMA_MEDIA_KEYS);
         return subcommand(mediaKeysSettings);
@@ -267,7 +296,8 @@ class MenuKeybinder:
 if (__name__ == "__main__"):
     parser = MenuKeybinder.createArgumentParser();
 
-    argcomplete.autocomplete(parser);
+    if (argcomplete is not None):
+        argcomplete.autocomplete(parser);
     menuKeybinder = parser.parse_args(namespace=MenuKeybinder());
 
     sys.exit(menuKeybinder.run());

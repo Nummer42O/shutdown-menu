@@ -8,6 +8,7 @@ Install by cloning this repository and building it using cmake.
 Building requires:
 - GTK 4 C (library and headers)
 - Glib 2 C (library and headers)
+- `glib-compile-schemas` (usually in `libglib2.0-bin`)
 - CMake >= 3.16
 
 ```bash
@@ -30,3 +31,18 @@ sudo cmake --build ./build --target uninstall
 ```
 
 `shutdown-menu-keybind disable` can be used to disable (or remove) the previously installed keybind.
+
+# Testing
+
+The repository includes unit tests (schema validation, CLI, keybind helper) and
+optional integration smoke tests for X11 and a nested GNOME Wayland session.
+
+```bash
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build ./build
+ctest --test-dir ./build --output-on-failure
+```
+
+See [`tests/README.md`](tests/README.md) for prerequisites, the full test list,
+artifacts and known limitations. VS Code tasks named `Test: ...` are also
+provided.

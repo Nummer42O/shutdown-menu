@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="text-viewer">
+<schemalist gettext-domain="shutdown-menu">
 	<schema id="@_application_id@" path="@_application_id_path@">
     <key name="timeout-length" type="i">
       <summary>Seconds until timeout</summary>

@@ -25,7 +25,7 @@
       "environment": [
         {
           "name": "GSETTINGS_SCHEMA_DIR",
-          "value": "${command:cmake.buildDirectory}"
+          "value": "${command:cmake.buildDirectory}/schemas"
         }
         // {
         //   "name": "GTK_DEBUG",

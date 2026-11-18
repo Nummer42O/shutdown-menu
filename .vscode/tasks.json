@@ -79,6 +79,133 @@
         "clear": true
       },
       "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: unit",
+      "detail": "Run unit tests (schema, keybind, CLI).",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure -L unit"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: all",
+      "detail": "Run all CTest tests, including integration tests.",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: schema",
+      "detail": "Validate the generated GSettings schema.",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure -R unit.schema -V"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: keybind",
+      "detail": "Run the keybind helper tests against a keyfile backend.",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure -R unit.keybind -V"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: Wayland smoke",
+      "detail": "Run the application in a private nested GNOME Wayland session.",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure -R integration.wayland-smoke -V"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "Test: X11 smoke",
+      "detail": "Run the application against a fresh Xephyr X11 display.",
+      "command": "/usr/bin/bash",
+      "args": [
+        "-lc",
+        "cd \"${workspaceFolder}/build\" && ctest --output-on-failure -R integration.x11-smoke -V"
+      ],
+      "dependsOn": "Build",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
     }
   ]
 }
