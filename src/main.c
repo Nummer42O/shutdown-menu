@@ -28,20 +28,20 @@ int main(int argc, char *argv[])
   if (finalAction == SHUTDOWN_MENU_FINAL_ACTION_NOTHING)
     return 0;
 
-#if LINUX_VERSION_MAJOR <= 3 && LINUX_VERSION_PATCHLEVEL < 1
-  if (setuid(0) == -1)
-    print_error("setuid");
-#else
-  int setUidResult;
-  do
-  {
-    setUidResult = setuid(0);
-  } while (setUidResult == -1 && errno == EAGAIN);
-  if (setUidResult == -1)
-    print_error("setuid");
-#endif
-  if (setgid(0) == -1)
-    print_error("setgid");
+// #if LINUX_VERSION_MAJOR <= 3 && LINUX_VERSION_PATCHLEVEL < 1
+//   if (setuid(0) == -1)
+//     print_error("setuid");
+// #else
+//   int setUidResult;
+//   do
+//   {
+//     setUidResult = setuid(0);
+//   } while (setUidResult == -1 && errno == EAGAIN);
+//   if (setUidResult == -1)
+//     print_error("setuid");
+// #endif
+//   if (setgid(0) == -1)
+//     print_error("setgid");
 
   const char *const environ[] = {NULL};
   char *subcommandArgv[4] = {};

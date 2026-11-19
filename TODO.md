@@ -185,7 +185,10 @@ Acceptance: fake-systemctl tests pass; a real Wayland session prompts through
 polkit; keybind enable/disable is idempotent and does not leave duplicates.
 
 
-## Phase 6 - documentation, CI, release
+## Phase 6 - postponed tasks
+- [ ] check if setuid/setgid is actually required
+
+## Phase X - documentation, CI, release
 
 - [ ] Update README:
   build dependencies (`libglib2.0-bin`, `python3-gi`, optional
