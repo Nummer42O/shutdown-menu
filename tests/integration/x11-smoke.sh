@@ -72,6 +72,7 @@ fi
 import -display "$nestedDisplay" -window root "${artifactDir}/before.png"
 
 appLog="${artifactDir}/app.log"
+# shellcheck disable=2054
 appEnv=(
   env DISPLAY="$nestedDisplay"
   GDK_BACKEND=x11

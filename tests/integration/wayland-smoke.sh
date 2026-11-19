@@ -96,6 +96,7 @@ import -display "$nestedDisplay" -window root "${artifactDir}/before.png"
 
 appLog="${artifactDir}/app.log"
 log "starting shutdown-menu under Wayland"
+# shellcheck disable=2054
 appEnv=(
   env -u DISPLAY
   WAYLAND_DISPLAY=shutdown-menu-test
