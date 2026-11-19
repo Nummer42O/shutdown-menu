@@ -43,17 +43,19 @@ int main(int argc, char *argv[])
   if (setgid(0) == -1)
     print_error("setgid");
 
-  const char *const subcommandArgv[] = {
-    "/usr/bin/systemctl",
-    DRY_RUN
-    (
-      finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF ?
-      SYSTEMCTL_SUBCOMMAND_POWEROFF :
-      SYSTEMCTL_SUBCOMMAND_REBOOT
-    ),
-    NULL
-};
   const char *const environ[] = {NULL};
+  char *subcommandArgv[4] = {};
+
+  size_t i = 0ul;
+  strcpy(subcommandArgv[i++], "/usr/bin/systemctl");
+  if (shutdown_menu_get_dryrun(app)) {
+    strcpy(subcommandArgv[i++], "--dry-run");
+  }
+  strcpy(
+    subcommandArgv[i++],
+    (finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF) ? SYSTEMCTL_SUBCOMMAND_POWEROFF : SYSTEMCTL_SUBCOMMAND_REBOOT
+  );
+  subcommandArgv[i] = NULL;
 
   execve(subcommandArgv[0], (char *const *)subcommandArgv, (char *const *)environ);
   perror("execve");

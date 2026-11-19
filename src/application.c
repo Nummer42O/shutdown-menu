@@ -29,6 +29,7 @@ struct _ShutdownMenuApplication
   unsigned int  countdownTimerTime,
                 countdownTimerInterval;
   int64_t       gracePeriod;
+  gboolean      dryRun;
 
   enum ShutdownMenuFinalAction *finalAction;
 };
@@ -52,6 +53,7 @@ void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
 {
   app->subcommandIsPowerOff = true;
   app->gracePeriod = 0l;
+  app->dryRun = false;
   GOptionEntry additional_options[] = {
     {
       .long_name    = "restart",
@@ -72,6 +74,16 @@ void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
       .arg_data     = &(app->gracePeriod),
 
       .description  = "The ammount of seconds the applications waits before enforcing the selected option."
+    },
+    {
+      .long_name    = "dry-run",
+      .short_name   = 'd',
+      .flags        = G_OPTION_FLAG_NONE,
+
+      .arg          = G_OPTION_ARG_NONE,
+      .arg_data     = &(app->dryRun),
+
+      .description  = "Run systemctl with --dry-run. This does not actually poweroff/restart your pc."
     },
     NULL
   };
@@ -235,6 +247,11 @@ static void shutdown_menu_application_activate(GApplication *app)
   // }
 
   gtk_window_present(GTK_WINDOW(smApp->window));
+}
+
+gboolean shutdown_menu_get_dryrun(ShutdownMenuApplication *app)
+{
+  return app->dryRun;
 }
 
 static void dialog_response(GtkDialog *self, gint response_id, gpointer user_data)

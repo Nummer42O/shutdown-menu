@@ -33,13 +33,6 @@ set(_application_id "${SHUTDOWN_MENU_APPLICATION_ID}")
 set(_stylesheet_install_dir "${CMAKE_INSTALL_DATADIR}/shutdown-menu")
 set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu")
 
-option(DRY_RUN "Wether to compile shutdown-menu steril, meaning without effect." OFF)
-if(${DRY_RUN})
-  set(_dry_run_definition "DRY_RUN=\"--dry-run\", ")
-else()
-  set(_dry_run_definition "DRY_RUN=")
-endif()
-
 # include
 find_package(PkgConfig 0.29 REQUIRED)
 pkg_check_modules(
@@ -64,7 +57,6 @@ target_link_libraries(shutdown-menu
 )
 target_compile_definitions(shutdown-menu
   PUBLIC
-    ${_dry_run_definition}
     STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
     APPLICATION_ID="${_application_id}"
     _GNU_SOURCE

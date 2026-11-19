@@ -43,6 +43,10 @@ static void shutdown_menu_application_activate(
   GApplication *app
 );
 
+gboolean shutdown_menu_get_dryrun(
+  ShutdownMenuApplication *app
+);
+
 G_END_DECLS
 
 static void dialog_response(

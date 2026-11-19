@@ -11,5 +11,6 @@ need_file "$app"
 output="$(env -u DISPLAY -u WAYLAND_DISPLAY "$app" --help 2>&1)" || die "--help failed"
 [[ "$output" == *"--restart"* ]] || die "--help does not advertise --restart"
 [[ "$output" == *"--grace-period"* ]] || die "--help does not advertise --grace-period"
+[[ "$output" == *"--dry-run"* ]] || die "--help does not advertise --dry-run"
 
 log "CLI help test passed"
