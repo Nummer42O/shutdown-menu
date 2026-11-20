@@ -49,32 +49,4 @@ gboolean shutdown_menu_get_dryrun(
 
 G_END_DECLS
 
-static void dialog_response(
-  GtkDialog *self,
-  gint responseId,
-  gpointer userData
-);
-
-
-static void accelerator_escape_action(
-  GSimpleAction *,
-  GVariant *,
-  gpointer userData
-);
-
-static void state_flags_changed(
-  GtkWidget *window,
-  GtkStateFlags,
-  gpointer userData
-);
-
-
-static gboolean dialog_countdown(
-  gpointer data
-);
-
-static gboolean dialog_timeout(
-  gpointer data
-);
-
 #endif //!defined(SHUTDOWN_MENU_APPLICATION_H)

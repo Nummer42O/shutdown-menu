@@ -69,8 +69,8 @@ passes. Integration tests either pass or skip with status 77.
 - [x] Rename compile definitions/macros to `SHUTDOWN_MENU_*`:
   `SHUTDOWN_MENU_APPLICATION_ID`, `SHUTDOWN_MENU_DRY_RUN`,
   `SHUTDOWN_MENU_STYLESHEET_DIR`, `SHUTDOWN_MENU_SYSTEMCTL`.
-- [ ] Move internal response constants and static declarations out of headers;
-  remove or rebuild the dead `dialog.c`/`dialog.h`.
+- [X] Move internal response constants and static declarations out of application headers.
+- [ ] Remove or rebuild the dead `dialog.c`/`dialog.h`.
 - [ ] Fix stylesheet/resource discovery for installed binaries:
   use a GResource (preferred) or a runtime search through the system data
   directories; do not embed a build-tree path.

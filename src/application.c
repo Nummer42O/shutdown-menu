@@ -16,6 +16,8 @@
 #define SHUTDOWN_MENU_RESPONSE_TIMEOUT  3
 
 
+// --- private declarations ---
+
 struct _ShutdownMenuApplication
 {
   GApplication parent_instance;
@@ -34,6 +36,35 @@ struct _ShutdownMenuApplication
   enum ShutdownMenuFinalAction *finalAction;
 };
 G_DEFINE_TYPE(ShutdownMenuApplication, shutdown_menu_application, GTK_TYPE_APPLICATION);
+
+static void dialog_response(
+  GtkDialog *self,
+  gint responseId,
+  gpointer userData
+);
+
+static gboolean dialog_countdown(
+  gpointer data
+);
+
+static gboolean dialog_timeout(
+  gpointer data
+);
+
+
+static void accelerator_escape_action(
+  GSimpleAction *,
+  GVariant *,
+  gpointer userData
+);
+
+static void state_flags_changed(
+  GtkWidget *window,
+  GtkStateFlags,
+  gpointer userData
+);
+
+// --- implementations ---
 
 
 ShutdownMenuApplication *shutdown_menu_application_new(enum ShutdownMenuFinalAction *finalAction)
