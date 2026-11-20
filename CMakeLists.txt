@@ -57,8 +57,8 @@ target_link_libraries(shutdown-menu
 )
 target_compile_definitions(shutdown-menu
   PUBLIC
-    STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
-    APPLICATION_ID="${_application_id}"
+    SHUTDOWN_MENU_STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
+    SHUTDOWN_MENU_APPLICATION_ID="${_application_id}"
     _GNU_SOURCE
 )
 add_subdirectory(src)

@@ -51,7 +51,7 @@ The test scaffold and the minimal build/guard fixes are already in place.
   schema from CMake.
 - [x] Fix keybind helper idempotence, aliases, duplicate paths, regex
   robustness, and optional `argcomplete`.
-- [ ] Add `--dry-run`/fake-systemctl test support so final actions can be
+- [x] Add `--dry-run`/fake-systemctl test support so final actions can be
   verified without invoking systemd/polkit.
 
 Acceptance: `cmake --build build` succeeds and `ctest --test-dir build -L unit`
@@ -63,10 +63,10 @@ passes. Integration tests either pass or skip with status 77.
   command/install path updated.
 - [x] Change the application ID to `io.github.Nummer42O.ShutdownMenu`; keep
   `SHUTDOWN_MENU_APPLICATION_ID` as a validated cache option.
-- [ ] Existing build trees keep the old cached application ID; reconfigure
+- [X] Existing build trees keep the old cached application ID; reconfigure
   with `-DSHUTDOWN_MENU_APPLICATION_ID=io.github.Nummer42O.ShutdownMenu`. Old
   dconf/keybind entries require manual migration.
-- [ ] Rename compile definitions/macros to `SHUTDOWN_MENU_*`:
+- [x] Rename compile definitions/macros to `SHUTDOWN_MENU_*`:
   `SHUTDOWN_MENU_APPLICATION_ID`, `SHUTDOWN_MENU_DRY_RUN`,
   `SHUTDOWN_MENU_STYLESHEET_DIR`, `SHUTDOWN_MENU_SYSTEMCTL`.
 - [ ] Move internal response constants and static declarations out of headers;
@@ -184,9 +184,9 @@ the overlay still dims correctly on Wayland and X11.
 Acceptance: fake-systemctl tests pass; a real Wayland session prompts through
 polkit; keybind enable/disable is idempotent and does not leave duplicates.
 
-
 ## Phase 6 - postponed tasks
 - [ ] check if setuid/setgid is actually required
+- [ ] remove build_install, instead create a "prod" repo in /usr/local/src/
 
 ## Phase X - documentation, CI, release
 

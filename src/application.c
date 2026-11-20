@@ -11,9 +11,9 @@
 #endif
 
 
-#define RESPONSE_POWEROFF 1
-#define RESPONSE_RESTART  2
-#define RESPONSE_TIMEOUT  3
+#define SHUTDOWN_MENU_RESPONSE_POWEROFF 1
+#define SHUTDOWN_MENU_RESPONSE_RESTART  2
+#define SHUTDOWN_MENU_RESPONSE_TIMEOUT  3
 
 
 struct _ShutdownMenuApplication
@@ -40,7 +40,7 @@ ShutdownMenuApplication *shutdown_menu_application_new(enum ShutdownMenuFinalAct
 {
   ShutdownMenuApplication *app = g_object_new(
     SHUTDOWN_MENU_TYPE_APPLICATION,
-    "application-id", APPLICATION_ID,
+    "application-id", SHUTDOWN_MENU_APPLICATION_ID,
     "flags", G_APPLICATION_FLAGS_NONE,
     NULL
   );
@@ -141,7 +141,7 @@ static void shutdown_menu_application_activate(GApplication *app)
 
   GtkCssProvider *cssProvider = gtk_css_provider_new();
   gtk_css_provider_load_from_path(
-    cssProvider, STYLESHEET_DIR "stylesheet.css"
+    cssProvider, SHUTDOWN_MENU_STYLESHEET_DIR "/stylesheet.css"
   );
   GdkDisplay *display = gtk_widget_get_display(smApp->window);
   gtk_style_context_add_provider_for_display(
@@ -207,11 +207,11 @@ static void shutdown_menu_application_activate(GApplication *app)
   );
   GtkWidget *restartButton = gtk_dialog_add_button(
     GTK_DIALOG(smApp->dialog),
-    "Restart", RESPONSE_RESTART
+    "Restart", SHUTDOWN_MENU_RESPONSE_RESTART
   );
   GtkWidget *powerOffButton = gtk_dialog_add_button(
     GTK_DIALOG(smApp->dialog),
-    "Power Off", RESPONSE_POWEROFF
+    "Power Off", SHUTDOWN_MENU_RESPONSE_POWEROFF
   );
   if (smApp->subcommandIsPowerOff)
     gtk_widget_grab_focus(powerOffButton);
@@ -260,13 +260,13 @@ static void dialog_response(GtkDialog *self, gint response_id, gpointer user_dat
 
   switch (response_id)
   {
-  case RESPONSE_RESTART:
+  case SHUTDOWN_MENU_RESPONSE_RESTART:
     *(app->finalAction) = SHUTDOWN_MENU_FINAL_ACTION_RESTART;
     break;
-  case RESPONSE_POWEROFF:
+  case SHUTDOWN_MENU_RESPONSE_POWEROFF:
     *(app->finalAction) = SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF;
     break;
-  case RESPONSE_TIMEOUT:
+  case SHUTDOWN_MENU_RESPONSE_TIMEOUT:
   *(app->finalAction) = (
       app->subcommandIsPowerOff ?
       SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF :
@@ -318,7 +318,7 @@ static gboolean dialog_timeout(gpointer data)
 
   gtk_dialog_response(
     GTK_DIALOG(app->dialog),
-    RESPONSE_TIMEOUT
+    SHUTDOWN_MENU_RESPONSE_TIMEOUT
   );
 
   return false;

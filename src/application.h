@@ -1,9 +1,9 @@
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef SHUTDOWN_MENU_APPLICATION_H
+#define SHUTDOWN_MENU_APPLICATION_H
 
 #include <gtk/gtk.h>
 
-#ifndef APPLICATION_ID
+#ifndef SHUTDOWN_MENU_APPLICATION_ID
 #error "Missing application id (APPLICATION_ID)."
 #endif
 
@@ -77,4 +77,4 @@ static gboolean dialog_timeout(
   gpointer data
 );
 
-#endif //!defined(APPLICATION_H)
+#endif //!defined(SHUTDOWN_MENU_APPLICATION_H)

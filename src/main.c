@@ -3,8 +3,8 @@
 
 #include <linux/version.h>
 
-#define SYSTEMCTL_SUBCOMMAND_REBOOT   "reboot"
-#define SYSTEMCTL_SUBCOMMAND_POWEROFF "poweroff"
+#define SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_REBOOT   "reboot"
+#define SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_POWEROFF "poweroff"
 
 
 static void print_error(const char *functionName)
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
   }
   strcpy(
     subcommandArgv[i++],
-    (finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF) ? SYSTEMCTL_SUBCOMMAND_POWEROFF : SYSTEMCTL_SUBCOMMAND_REBOOT
+    (finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF) ? SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_POWEROFF : SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_REBOOT
   );
   subcommandArgv[i] = NULL;
 
