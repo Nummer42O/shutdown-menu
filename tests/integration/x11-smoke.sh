@@ -76,6 +76,7 @@ appLog="${artifactDir}/app.log"
 appEnv=(
   env DISPLAY="$nestedDisplay"
   GDK_BACKEND=x11
+  GTK_A11Y=test
   G_DEBUG=fatal-criticals,fatal-warnings
 )
 if [[ -n "$schemaDir" ]]; then

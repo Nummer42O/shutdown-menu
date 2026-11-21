@@ -164,6 +164,9 @@ nested Xephyr display used by the Wayland smoke test).
 - `G_DEBUG=fatal-warnings` is enabled for the integration tests. If GNOME or
   GTK itself emits an unrelated warning in a particular environment, inspect
   the artifact log before disabling the flag.
+- The integration tests set `GTK_A11Y=test`, which uses GTK's test accessibility
+  backend and does not require a live AT-SPI bus. `NO_AT_BRIDGE=1` is a GTK3
+  setting and is ignored by GTK4.
 
 ## VS Code
 

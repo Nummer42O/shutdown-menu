@@ -101,6 +101,7 @@ appEnv=(
   env -u DISPLAY
   WAYLAND_DISPLAY=shutdown-menu-test
   GDK_BACKEND=wayland
+  GTK_A11Y=test
   G_DEBUG=fatal-criticals,fatal-warnings
 )
 if [[ -n "$schemaDir" ]]; then
