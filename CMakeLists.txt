@@ -38,6 +38,7 @@ set(_application_id_path "/${_application_id_path}/")
 set(_application_id "${SHUTDOWN_MENU_APPLICATION_ID}")
 
 set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu")
+set(_shutdown_menu_keybind_helper "${CMAKE_BINARY_DIR}/shutdown-menu-keybind")
 
 # Keep the schema paths defined even when glib-compile-schemas is unavailable;
 # tests use them and skip schema-specific checks independently.
@@ -114,7 +115,7 @@ add_custom_target(shutdown-menu-gresource
 # This script is intentionally not installed; run it from the build tree.
 configure_file(
   "${CMAKE_SOURCE_DIR}/cmake/shutdown-menu-keybind.py.in"
-  "${CMAKE_BINARY_DIR}/shutdown-menu-keybind"
+  "${_shutdown_menu_keybind_helper}"
   @ONLY
 )
 
@@ -176,6 +177,38 @@ endif()
 
 # installation
 
+## custom keybind helper target
+
+# NOTE: If the script starts creating log files at some point, list them as byproducts.
+add_custom_target(enable-keybinds
+  COMMAND "${_shutdown_menu_keybind_helper}" enable
+  DEPENDS "${_shutdown_menu_keybind_helper}"
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  COMMENT "Install/Enable keybinds for the shutdown menu."
+  VERBATIM USES_TERMINAL
+)
+add_custom_target(force-enable-keybinds
+  COMMAND "${_shutdown_menu_keybind_helper}" enable --problem-handler disable
+  DEPENDS "${_shutdown_menu_keybind_helper}"
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  COMMENT "Install/Enable keybinds for the shutdown menu."
+  VERBATIM USES_TERMINAL
+)
+add_custom_target(disable-keybinds
+  COMMAND "${_shutdown_menu_keybind_helper}" disable
+  DEPENDS "${_shutdown_menu_keybind_helper}"
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  COMMENT "Disable keybinds for the shutdown menu."
+  VERBATIM USES_TERMINAL
+)
+add_custom_target(purge-keybinds
+  COMMAND "${_shutdown_menu_keybind_helper}" disable --purge
+  DEPENDS "${_shutdown_menu_keybind_helper}"
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  COMMENT "Remove keybinds for the shutdown menu."
+  VERBATIM USES_TERMINAL
+)
+
 ## install
 
 # NOTE: The generated keybind helper is intentionally not installed. Run it from the build tree instead.
@@ -190,23 +223,6 @@ install(
   DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/48x48/apps/"
   RENAME shutdown-menu.png
 )
-# install(
-#   CODE
-#   "if (DEFINED ENV{PKEXEC_UID})
-#     set(UID \$ENV{PKEXEC_UID})
-#   elseif(DEFINED ENV{SUDO_UID})
-#     set(UID \$ENV{SUDO_UID})
-#   else()
-#     message(FATAL_ERROR \"Unable to determine callee UID.\")
-#   endif()
-#   execute_process(
-#     COMMAND sudo -H -u \"#\${UID}\" env DISPLAY=$ENV{DISPLAY} /usr/bin/python3 \"${CMAKE_SOURCE_DIR}/tools/enable-shutdown-menu-keybind.py\" --command \"${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu\"
-#     RESULT_VARIABLE _ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT
-#   )
-#   if (_ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT GREATER 0)
-#     message(FATAL_ERROR \"Enabling shutdown-menu keybinds failed with exit code \${_ENABLE_SHUTDOWN_MENU_KEYBIND_RESULT}\")
-#   endif()"
-# )
 
 ## uninstall
 

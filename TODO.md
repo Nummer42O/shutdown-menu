@@ -85,10 +85,7 @@ passes. Integration tests either pass or skip with status 77.
 - [X] Fix stylesheet/resource discovery for installed binaries:
   use a GResource (preferred) or a runtime search through the system data
   directories; do not embed a build-tree path.
-- [ ] Install the keybind script with `install(PROGRAMS ...)` from the build
-  tree; keep the source-tree copy only as a developer convenience or remove it.
-- [ ] Remove `CONFIGURATIONS Release ...` filters so Debug builds can be
-  installed.
+- [X] Add the keybind helper as a CMake custom target.
 - [ ] Install the schema to `${DATADIR}/glib-2.0/schemas`; run
   `glib-compile-schemas --strict` at install time (respect `DESTDIR`).
 - [ ] Add a matching `.desktop` file and application name:
