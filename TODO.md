@@ -16,6 +16,15 @@ The test scaffold and the minimal build/guard fixes are already in place.
   - Wayland/GNOME: Mutter `DisplayConfig` over D-Bus.
   - No special fallback is required; if detection is unavailable, current
     behavior is acceptable.
+- Target platform: Ubuntu 22.04+ (systemd 249+). Ubuntu 20.04 is only the
+  visual reference for the dialog; do not carry 20.04-specific workarounds.
+- Privileged actions use systemd-logind over D-Bus as the unprivileged user.
+  Do not use `setuid`, `setgid`, `pkexec`, or a `systemctl` subprocess, and do
+  not run the GUI as root.
+- Do not request interactive polkit authorization. The dialog is the last
+  interactive interface before power-off/reboot. A vendor polkit rule
+  authorizes the relevant logind actions for active local sessions; denied
+  requests are reported, not retried with an authentication prompt.
 - Application identity:
   - Application/schema ID: `io.github.Nummer42O.ShutdownMenu`.
   - Executable/CMake target: `shutdown-menu`.
@@ -36,9 +45,11 @@ The test scaffold and the minimal build/guard fixes are already in place.
   - `unit.schema` (strict schema validation)
   - `unit.keybind` (temporary keyfile backend, idempotence/aliases/purge)
   - `unit.cli` (`--help`, public options)
+  - `unit.mock-logind` (private bus and mock logind service)
   - `integration.wayland-smoke` (nested GNOME Shell under Xephyr)
   - `integration.x11-smoke` (fresh Xephyr X11 display)
   - XTest click helper for manual focus/click testing
+  - mock logind helper for future action-execution tests
 - [x] Register tests with CTest (`BUILD_TESTING`, labels `unit`/`integration`,
   skip status 77 when optional dependencies are absent).
 - [x] Add VS Code tasks for unit, all, schema, keybind, Wayland smoke and X11
@@ -51,8 +62,8 @@ The test scaffold and the minimal build/guard fixes are already in place.
   schema from CMake.
 - [x] Fix keybind helper idempotence, aliases, duplicate paths, regex
   robustness, and optional `argcomplete`.
-- [x] Add `--dry-run`/fake-systemctl test support so final actions can be
-  verified without invoking systemd/polkit.
+- [x] Add `--dry-run` test support so final actions can be verified without
+  invoking logind/polkit.
 
 Acceptance: `cmake --build build` succeeds and `ctest --test-dir build -L unit`
 passes. Integration tests either pass or skip with status 77.
@@ -68,7 +79,7 @@ passes. Integration tests either pass or skip with status 77.
   dconf/keybind entries require manual migration.
 - [x] Rename compile definitions/macros to `SHUTDOWN_MENU_*`:
   `SHUTDOWN_MENU_APPLICATION_ID`, `SHUTDOWN_MENU_DRY_RUN`,
-  `SHUTDOWN_MENU_STYLESHEET_DIR`, `SHUTDOWN_MENU_SYSTEMCTL`.
+  `SHUTDOWN_MENU_STYLESHEET_DIR`.
 - [x] Move internal response constants and static declarations out of application headers.
 - [x] Remove or rebuild the dead `dialog.c`/`dialog.h`.
 - [ ] Fix stylesheet/resource discovery for installed binaries:
@@ -168,24 +179,62 @@ the overlay still dims correctly on Wayland and X11.
 
 ## Phase 5 - action execution, keybind, Wayland session integration
 
-- [ ] Make the `systemctl` path configurable (`SHUTDOWN_MENU_SYSTEMCTL`) and
-  add a runtime `--dry-run` or fake-command test path.
-- [ ] Verify final action selection separately from execution:
-  cancel -> no exec; timeout -> default; buttons -> selected option.
-- [ ] Review `setuid`/`setgid`/`execve` behavior and environment sanitization;
-  preserve only the variables needed by systemd/polkit.
-- [ ] On Wayland, the UI runs as the user and systemctl triggers the polkit
-  agent after the overlay closes; do not run the GUI as root.
+- [ ] Replace the `systemctl` subprocess with a GDBus logind backend:
+  call `org.freedesktop.login1.Manager.PowerOff(false)` or `Reboot(false)` on
+  the system bus with `G_DBUS_CALL_FLAGS_NONE` (no
+  `ALLOW_INTERACTIVE_AUTHORIZATION`). Do not fall back to `systemctl` or
+  `pkexec`, since either can prompt.
+- [ ] Remove `SHUTDOWN_MENU_SYSTEMCTL`, `execve`, `setuid`, `setgid`, and the
+  systemctl environment sanitization; the UI and D-Bus caller stay unprivileged.
+- [ ] Make `--dry-run` print the selected logind method and exit without
+  contacting D-Bus; keep final-action selection separate from execution
+  (cancel -> no call, timeout -> default, buttons -> selected option).
+- [ ] Install the polkit rule as
+  `${CMAKE_INSTALL_DATADIR}/polkit-1/rules.d/50-shutdown-menu.rules`
+  (`/usr/share/polkit-1/rules.d/...` for a system install), mode 0644, from
+  every build configuration. Make installation a CMake option
+  (`SHUTDOWN_MENU_INSTALL_POLKIT_RULE`) for packagers. Respect `DESTDIR`, keep
+  `/etc/polkit-1/rules.d` as the administrator override,
+  and document that the rule applies to the logind power-off/reboot actions
+  globally, not only to shutdown-menu. Note the `DATADIR` caveat: polkit does
+  not search `/usr/local/share/polkit-1/rules.d`, so either configure with
+  `-DCMAKE_INSTALL_PREFIX=/usr` or install the rule explicitly; warn at
+  configure time when the rule is enabled and the prefix is not `/usr`.
+- [ ] Restrict the rule to `subject.local && subject.active` and the
+  `org.freedesktop.login1.power-off`, `reboot`, `power-off-multiple-sessions`,
+  and `reboot-multiple-sessions` actions; do not grant ignore-inhibit actions.
+- [ ] Handle logind D-Bus results explicitly:
+  - `CanPowerOff`/`CanReboot`: treat `no` and `na` as unsupported/disabled and
+    report them; `challenge` means authorization may be required, so still
+    attempt `PowerOff(false)`/`Reboot(false)` and let the installed rule decide.
+  - `org.freedesktop.DBus.Error.AccessDenied`: the polkit rule is absent,
+    disabled, or does not match the session; report it and exit nonzero.
+    Never retry with interactive authorization.
+  - `org.freedesktop.DBus.Error.ServiceUnknown`: logind is unavailable; report
+    it and exit nonzero.
+  - `org.freedesktop.login1.OperationInProgress`: another shutdown/reboot
+    request is already pending; report it and exit nonzero.
+  - Timeout/no reply: report a timeout; do not silently claim success.
+  Show failures via stderr/journal and a desktop notification or a small error
+  dialog, since the main dialog is already gone and keybind launches have no
+  visible terminal.
+- [ ] Ensure the overlay is destroyed before the logind call so no UI covers a
+  potential error response or authorization check.
+- [ ] Add mock-logind tests using the private bus helper; verify cancel makes no
+  call and that timeout/buttons send the correct method with
+  `interactive=false`.
 - [ ] Keybind: keep the corrected idempotence/alias behavior; verify
   custom-keybindings are per-user and work under Wayland session services.
 - [ ] Add the `.desktop` file and icon so the app has a stable identity; accept
   that Wayland has no skip-taskbar equivalent.
 
-Acceptance: fake-systemctl tests pass; a real Wayland session prompts through
-polkit; keybind enable/disable is idempotent and does not leave duplicates.
+Acceptance: mock-logind tests pass; a real Ubuntu 22.04+ session powers
+off/reboots through logind without a polkit prompt when the rule is installed;
+a missing rule or denied request reports `AccessDenied` without prompting; no
+`systemctl`, `execve`, or setuid path remains; keybind enable/disable is
+idempotent and does not leave duplicates.
 
 ## Phase 6 - postponed tasks
-- [ ] check if setuid/setgid is actually required
 - [ ] remove build_install, instead create a "prod" repo in /usr/local/src/
 
 ## Phase X - documentation, CI, release
@@ -193,9 +242,11 @@ polkit; keybind enable/disable is idempotent and does not leave duplicates.
 - [ ] Update README:
   build dependencies (`libglib2.0-bin`, `python3-gi`, optional
   `argcomplete`), Wayland/X11 behavior, multi-monitor/primary settings,
-  keybind usage, test commands, fake-systemctl/dry-run testing.
+  keybind usage, test commands, mock-logind/dry-run testing, the polkit rule,
+  and the no-interactive-authorization behavior.
 - [ ] Add a CI job for Debug/Release builds, `-Wall -Wextra -Werror`,
-  schema validation, keybind idempotence, CLI help and fake-systemctl actions.
+  schema validation, keybind idempotence, CLI help, mock-logind action
+  execution, and the polkit rule installation/path checks.
 - [ ] Optional CI integration job: nested GNOME Wayland smoke test; tolerate
   missing compositor with skipped tests.
 - [ ] Bump the version and document migration (app ID, dconf path, executable
@@ -224,7 +275,8 @@ the installed behavior and the new identity.
 | Multi-monitor hotplug | rebuilds overlays | rebuilds overlays | preferred monitor fallback |
 | Theme | light/dark/auto | light/dark/auto | `theme` |
 | Keybind | enable/disable/purge idempotent | same (GSettings/gsd) | keyfile backend test |
-| Action execution | cancel = no exec; timeout/buttons correct | polkit prompt after overlay closes | fake systemctl / dry-run |
+| Action execution | cancel = no call; timeout/buttons correct | logind D-Bus; no prompt with installed rule | mock logind / dry-run |
+| Authorization failure | `AccessDenied` reported, no retry | same | rule absent / inactive session |
 
 ## Verification commands
 
@@ -236,7 +288,8 @@ ctest --test-dir build -L unit --output-on-failure
 ctest --test-dir build -L integration --output-on-failure
 ```
 
-Test artifacts: `build/test-artifacts/` (Wayland/X11 screenshots and logs).
+Test artifacts: `build/test-artifacts/` (Wayland/X11 screenshots and logs,
+plus `mock-logind/calls.jsonl`).
 
 ## Notes / gotchas
 

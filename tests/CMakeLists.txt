@@ -8,6 +8,8 @@ find_program(GNOME_SHELL_EXECUTABLE NAMES gnome-shell)
 find_program(IMPORT_EXECUTABLE NAMES import)
 find_program(COMPARE_EXECUTABLE NAMES compare)
 find_program(CONVERT_EXECUTABLE NAMES convert)
+find_program(DBUS_RUN_SESSION_EXECUTABLE NAMES dbus-run-session)
+find_program(GDBUS_EXECUTABLE NAMES gdbus)
 
 set(SHUTDOWN_MENU_TEST_ARTIFACTS "${CMAKE_BINARY_DIR}/test-artifacts")
 file(MAKE_DIRECTORY "${SHUTDOWN_MENU_TEST_ARTIFACTS}")
@@ -51,6 +53,21 @@ set_tests_properties(unit.cli PROPERTIES
   LABELS "unit"
   TIMEOUT 30
 )
+
+if(Python3_Interpreter_FOUND AND DBUS_RUN_SESSION_EXECUTABLE AND GDBUS_EXECUTABLE)
+  add_test(
+    NAME unit.mock-logind
+    COMMAND "${BASH_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/unit/mock-logind.sh"
+      "${Python3_EXECUTABLE}"
+      "${GDBUS_EXECUTABLE}"
+      "${SHUTDOWN_MENU_TEST_ARTIFACTS}/mock-logind"
+  )
+  set_tests_properties(unit.mock-logind PROPERTIES
+    LABELS "unit"
+    TIMEOUT 60
+    SKIP_RETURN_CODE 77
+  )
+endif()
 
 # --- integration tests ----------------------------------------------------
 

@@ -83,7 +83,7 @@
     {
       "type": "shell",
       "label": "Test: unit",
-      "detail": "Run unit tests (schema, keybind, CLI).",
+      "detail": "Run unit tests (schema, keybind, CLI, mock logind).",
       "command": "/usr/bin/bash",
       "args": [
         "-lc",

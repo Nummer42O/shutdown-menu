@@ -10,7 +10,9 @@ For the unit tests:
 
 - CMake >= 3.16 and a C compiler
 - GLib tools (`glib-compile-schemas`, usually in `libglib2.0-bin`)
-- Python 3 with `gi` (`python3-gi`) for the keybind test
+- `gdbus` (also in `libglib2.0-bin`) for the mock-logind test
+- Python 3 with `gi` (`python3-gi`) for the keybind and mock-logind tests
+- `dbus-run-session` (part of `dbus`) for the private mock-logind bus
 - `argcomplete` is optional; the keybind script degrades gracefully without it
 
 For the integration smoke tests:
@@ -48,7 +50,7 @@ ctest --test-dir build -L integration --output-on-failure
 ctest --test-dir build -R unit.keybind -V
 ```
 
-Artifacts (screenshots and app logs) are written to
+Artifacts (screenshots, app logs, and mock-logind calls) are written to
 `build/test-artifacts/` by default. Override this with the
 `SHUTDOWN_MENU_TEST_ARTIFACTS` environment variable.
 
@@ -77,6 +79,47 @@ database. It verifies:
 
 Runs the built binary with `--help` without a display and checks that the
 public options (`--restart`, `--grace-period`) are advertised.
+
+### `unit.mock-logind`
+
+Exercises `helpers/mock-logind.py` through `helpers/with-mock-logind.sh`.
+The helper starts a private D-Bus bus, sets `DBUS_SYSTEM_BUS_ADDRESS` to that
+bus, and runs the command with a mock `org.freedesktop.login1` service. The
+mock implements `PowerOff`, `Reboot`, `CanPowerOff`, and `CanReboot`, and
+records every power/reboot request as JSON Lines.
+
+This test calls `PowerOff(false)` and `Reboot(true)` with `gdbus` and verifies
+the recorded methods and interactive flags. It does not start the GUI or touch
+the real system bus.
+
+### Mock logind helper
+
+`helpers/with-mock-logind.sh` is intended for later action-execution tests:
+
+```bash
+tests/helpers/with-mock-logind.sh \
+  --record build/test-artifacts/mock-logind/calls.jsonl \
+  -- <command> [arguments...]
+```
+
+The command can use `DBUS_SYSTEM_BUS_ADDRESS` directly, or ordinary GDBus
+`G_BUS_TYPE_SYSTEM` calls. Useful options:
+
+- `--python PATH` selects the Python interpreter with `python3-gi`.
+- `--can-result yes|no|na|challenge` changes what `CanPowerOff`/`CanReboot`
+  return.
+- `--exit-after N` stops the mock after N power/reboot calls.
+
+The record file contains one object per call, for example:
+
+```json
+{"interactive": false, "method": "PowerOff", "time": 1795282911.869683}
+```
+
+A future GUI test can launch `shutdown-menu` inside the helper, select a button
+or let the timeout expire, and then assert the recorded method. Cancel should
+leave the record file empty. The helper always creates a private bus; it never
+replaces the real logind service.
 
 ### `integration.wayland-smoke`
 
