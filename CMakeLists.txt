@@ -68,6 +68,8 @@ find_program(_glib_compile_schemas
 
 # generated files
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+
 ## GResource
 
 configure_file(

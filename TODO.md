@@ -222,6 +222,8 @@ the overlay still dims correctly on Wayland and X11.
   `interactive=false`.
 - [ ] Keybind: keep the corrected idempotence/alias behavior; verify
   custom-keybindings are per-user and work under Wayland session services.
+- [ ] Keybind: fix the helper so the default `--problem-handler` value is
+  respected when the option is omitted.
 - [ ] Add the `.desktop` file and icon so the app has a stable identity; accept
   that Wayland has no skip-taskbar equivalent.
 
