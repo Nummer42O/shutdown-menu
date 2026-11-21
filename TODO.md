@@ -82,7 +82,7 @@ passes. Integration tests either pass or skip with status 77.
   `SHUTDOWN_MENU_STYLESHEET_DIR`.
 - [x] Move internal response constants and static declarations out of application headers.
 - [x] Remove or rebuild the dead `dialog.c`/`dialog.h`.
-- [ ] Fix stylesheet/resource discovery for installed binaries:
+- [X] Fix stylesheet/resource discovery for installed binaries:
   use a GResource (preferred) or a runtime search through the system data
   directories; do not embed a build-tree path.
 - [ ] Install the keybind script with `install(PROGRAMS ...)` from the build

@@ -33,6 +33,8 @@ set(_application_id "${SHUTDOWN_MENU_APPLICATION_ID}")
 set(_stylesheet_install_dir "${CMAKE_INSTALL_DATADIR}/shutdown-menu")
 set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu")
 
+set(_gresource_dependencies CACHE INTERNAL "GResource dependencies for shutdown menu.")
+
 # include
 find_package(PkgConfig 0.29 REQUIRED)
 pkg_check_modules(
@@ -43,9 +45,59 @@ pkg_check_modules(
     gobject-2.0
   REQUIRED
 )
+find_program(_glib_compile_resources
+  NAMES glib-compile-resources
+  REQUIRED
+)
+
+# compile gresources
+# shamelessly stolen from here: https://stackoverflow.com/questions/63664809/use-list-as-dependencies-on-add-custom-command
+set(_gresource_in_file  "${CMAKE_SOURCE_DIR}/cmake/shutdown-menu.gresource.xml.in")
+set(_gresource_xml_file "${CMAKE_CURRENT_BINARY_DIR}/cmake/shutdown-menu.gresource.xml")
+if((NOT EXISTS "${_gresource_in_file}") OR
+   ("${_gresource_in_file}" IS_NEWER_THAN "${_gresource_xml_file}"))
+  configure_file(
+    "${_gresource_in_file}"
+    "${_gresource_xml_file}"
+    @ONLY
+  )
+  execute_process(
+    COMMAND "${_glib_compile_resources}"
+      --generate-dependencies
+      --sourcedir "${CMAKE_SOURCE_DIR}/resources"
+      "${_gresource_xml_file}"
+    OUTPUT_VARIABLE _gresource_dependencies
+  )
+
+  string(REPLACE "\n" ";" _gresource_dependencies "${_gresource_dependencies}")
+  list(POP_BACK _gresource_dependencies)
+endif()
+
+set(_gresource_c_file "${CMAKE_BINARY_DIR}/generated/shutdown-menu.gresource.c")
+add_custom_command(
+  OUTPUT "${_gresource_c_file}"
+  COMMAND "${_glib_compile_resources}"
+  ARGS
+    --generate-source
+    --sourcedir "${CMAKE_SOURCE_DIR}/resources"
+    --target "${_gresource_c_file}"
+    --c-name shutdown_menu_
+    --internal
+    "${_gresource_xml_file}"
+  VERBATIM
+  MAIN_DEPENDENCY "${_gresource_xml_file}"
+  DEPENDS "${_gresource_dependencies}"
+)
+add_custom_target(shutdown-menu-gresource
+  DEPENDS "${_gresource_c_file}"
+)
 
 # build
 add_executable(shutdown-menu)
+target_sources(shutdown-menu
+  PRIVATE
+    "${_gresource_c_file}"
+)
 target_include_directories(shutdown-menu
   PRIVATE
     src
@@ -57,20 +109,14 @@ target_link_libraries(shutdown-menu
 )
 target_compile_definitions(shutdown-menu
   PUBLIC
-    SHUTDOWN_MENU_STYLESHEET_DIR="$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>$<INSTALL_INTERFACE:${_stylesheet_install_dir}>/"
     SHUTDOWN_MENU_APPLICATION_ID="${_application_id}"
+    SHUTDOWN_MENU_APPLICATION_ID_PATH="${_application_id_path}"
     _GNU_SOURCE
 )
 add_subdirectory(src)
+add_dependencies(shutdown-menu shutdown-menu-gresource)
 
 # configure
-configure_file(
-  cmake/shutdown-menu-keybind.py.in
-  ${CMAKE_SOURCE_DIR}/shutdown-menu-keybind
-  @ONLY
-)
-# Keep a build-tree copy for tests and developers who do not want the
-# generated script in the source tree.
 configure_file(
   cmake/shutdown-menu-keybind.py.in
   ${CMAKE_BINARY_DIR}/shutdown-menu-keybind
@@ -124,11 +170,6 @@ install(
   CONFIGURATIONS Release RelWithDebInfo MinSizeRel
   DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/48x48/apps/
   RENAME shutdown-menu.png
-)
-install(
-  FILES stylesheet.css
-  CONFIGURATIONS Release RelWithDebInfo MinSizeRel
-  DESTINATION ${_stylesheet_install_dir}
 )
 # install(
 #   CODE

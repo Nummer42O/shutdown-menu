@@ -44,16 +44,17 @@ int main(int argc, char *argv[])
 //     print_error("setgid");
 
   const char *const environ[] = {NULL};
-  char *subcommandArgv[4] = {};
+  const char *subcommandArgv[4] = {};
 
   size_t i = 0ul;
-  strcpy(subcommandArgv[i++], "/usr/bin/systemctl");
+  subcommandArgv[i++] = "/usr/bin/systemctl";
   if (shutdown_menu_get_dryrun(app)) {
-    strcpy(subcommandArgv[i++], "--dry-run");
+    subcommandArgv[i++] = "--dry-run";
   }
-  strcpy(
-    subcommandArgv[i++],
-    (finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF) ? SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_POWEROFF : SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_REBOOT
+  subcommandArgv[i++] = (
+    finalAction == SHUTDOWN_MENU_FINAL_ACTION_POWER_OFF ?
+    SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_POWEROFF :
+    SHUTDOWN_MENU_SYSTEMCTL_SUBCOMMAND_REBOOT
   );
   subcommandArgv[i] = NULL;
 

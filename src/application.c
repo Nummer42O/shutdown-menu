@@ -171,9 +171,12 @@ static void shutdown_menu_application_activate(GApplication *app)
   gtk_window_set_icon_name(GTK_WINDOW(smApp->window), "shutdown-menu");
 
   GtkCssProvider *cssProvider = gtk_css_provider_new();
-  gtk_css_provider_load_from_path(
-    cssProvider, SHUTDOWN_MENU_STYLESHEET_DIR "/stylesheet.css"
+  gtk_css_provider_load_from_resource(
+    cssProvider, SHUTDOWN_MENU_APPLICATION_ID_PATH "/stylesheet.css"
   );
+  // gtk_css_provider_load_from_path(
+  //   cssProvider, SHUTDOWN_MENU_STYLESHEET_DIR "/stylesheet.css"
+  // );
   GdkDisplay *display = gtk_widget_get_display(smApp->window);
   gtk_style_context_add_provider_for_display(
     display, GTK_STYLE_PROVIDER(cssProvider),
