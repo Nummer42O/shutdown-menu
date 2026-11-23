@@ -231,12 +231,12 @@ install(
 # from: https://gitlab.kitware.com/cmake/community/-/wikis/FAQ#can-i-do-make-uninstall-with-cmake
 if(NOT TARGET uninstall)
   configure_file(
-    "${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-    "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+    "${CMAKE_SOURCE_DIR}/cmake/cmake-uninstall.cmake.in"
+    "${CMAKE_BINARY_DIR}/cmake-uninstall.cmake"
     IMMEDIATE @ONLY
   )
 
   add_custom_target(uninstall
-    COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+    COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_BINARY_DIR}/cmake-uninstall.cmake"
   )
 endif()
