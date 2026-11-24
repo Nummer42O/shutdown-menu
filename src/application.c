@@ -18,20 +18,35 @@
 
 // --- private declarations ---
 
+typedef enum {
+  automatic = 0,
+  light     = 1,
+  dark      = 2
+} ShutdownMenuThemeOptions;
+
 struct _ShutdownMenuApplication
 {
-  GApplication parent_instance;
+  // required stuff
+  GApplication  parent_instance;
 
-  GSettings *settings;
-  GtkWidget *window,
-            *dialog;
+  // interface stuff
+  GSettings     *settings;
+  GtkWidget     *window,
+                *dialog;
+  char          *secondaryTextFormat;
 
+  // cli option values
   gboolean      subcommandIsPowerOff;
-  char         *secondaryTextFormat;
-  unsigned int  countdownTimerTime,
-                countdownTimerInterval;
-  int64_t       gracePeriod;
   gboolean      dryRun;
+
+  // gsetting option values
+  guint32       countdownLength,
+                countdownUpdateInterval;
+  // NOTE: the following are unused for now
+  ShutdownMenuThemeOptions \
+                theme;
+  gchar         *dialogMonitor;
+  gboolean      dimAllMonitors;
 
   enum ShutdownMenuFinalAction *finalAction;
 };
@@ -83,7 +98,6 @@ ShutdownMenuApplication *shutdown_menu_application_new(enum ShutdownMenuFinalAct
 void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
 {
   app->subcommandIsPowerOff = true;
-  app->gracePeriod = 0l;
   app->dryRun = false;
   GOptionEntry additional_options[] = {
     {
@@ -95,16 +109,6 @@ void shutdown_menu_add_cli_arguments(ShutdownMenuApplication *app)
       .arg_data     = &(app->subcommandIsPowerOff),
 
       .description  = "Restart instead of powering off."
-    },
-    {
-      .long_name    = "grace-period",
-      .short_name   = 'g',
-      .flags        = G_OPTION_FLAG_NONE,
-
-      .arg          = G_OPTION_ARG_INT64,
-      .arg_data     = &(app->gracePeriod),
-
-      .description  = "The ammount of seconds the applications waits before enforcing the selected option."
     },
     {
       .long_name    = "dry-run",
@@ -127,7 +131,11 @@ static void shutdown_menu_application_dispose(GObject *object)
 {
   ShutdownMenuApplication *app = SHUTDOWN_MENU_APPLICATION(object);
 
-  g_clear_object(&app->settings);
+  //! NOTE: If settings is NULL, then dialogMonitor is a hard-baked string
+  if (app->settings != NULL) {
+    g_free(app->dialogMonitor);
+  }
+  g_free(app->settings);
   //! TODO: if dialog: destroy
   //! TODO: if window: destroy
 
@@ -147,11 +155,32 @@ static void shutdown_menu_application_init(ShutdownMenuApplication *app)
 {
   g_assert(GTK_IS_APPLICATION(app));
 
-  // app->settings = g_settings_new(APPLICATION_ID);
+  GSettingsSchemaSource *schemaSource = g_settings_schema_source_get_default();
+  GSettingsSchema *schema = g_settings_schema_source_lookup(schemaSource, SHUTDOWN_MENU_APPLICATION_ID, false);
+  if (schema != NULL) {
+    app->settings = g_settings_new(SHUTDOWN_MENU_APPLICATION_ID);
+    g_settings_sync();
 
-  //! TODO: from settings
-  app->countdownTimerTime = 60u;
-  app->countdownTimerInterval = 10u;
+    app->countdownLength = g_settings_get_uint(app->settings, "countdown-length");
+    app->countdownUpdateInterval = g_settings_get_uint(app->settings, "countdown-update-interval");
+    app->theme = g_settings_get_enum(app->settings, "theme");
+    app->dialogMonitor = g_settings_get_string(app->settings, "dialog-monitor");
+    app->dimAllMonitors = g_settings_get_boolean(app->settings, "dim-all-monitors");
+  } else {
+    fprintf(stderr, "Can not load schema for %s, loading default values.\n", SHUTDOWN_MENU_APPLICATION_ID);
+
+    app->settings = NULL;
+
+    app->countdownLength = 60;
+    app->countdownUpdateInterval = 10;
+    app->theme = automatic;
+    app->dialogMonitor = "primary";
+    app->dimAllMonitors = true;
+  }
+
+  //! TODO: somehow this free raises an exception but the documentation
+  //!       says it needs to be freed...
+  // g_free(schema);
 }
 
 static void shutdown_menu_application_activate(GApplication *app)
@@ -218,18 +247,18 @@ static void shutdown_menu_application_activate(GApplication *app)
 
   g_timeout_add_full(
     G_PRIORITY_DEFAULT,
-    smApp->countdownTimerTime * 1000,
+    smApp->countdownLength * 1000,
     dialog_timeout,
     smApp,
     NULL
   );
   gtk_message_dialog_format_secondary_text(
     GTK_MESSAGE_DIALOG(smApp->dialog),
-    smApp->secondaryTextFormat, smApp->countdownTimerTime
+    smApp->secondaryTextFormat, smApp->countdownLength
   );
   g_timeout_add_full(
     G_PRIORITY_LOW,
-    smApp->countdownTimerInterval * 1000,
+    smApp->countdownUpdateInterval * 1000,
     dialog_countdown,
     smApp,
     NULL
@@ -334,13 +363,13 @@ static gboolean dialog_countdown(gpointer data)
 {
   ShutdownMenuApplication *app = data;
 
-  app->countdownTimerTime -= app->countdownTimerInterval;
-  if (app->countdownTimerTime <= 0u)
+  app->countdownLength -= app->countdownUpdateInterval;
+  if (app->countdownLength <= 0u)
     return false;
 
   gtk_message_dialog_format_secondary_text(
     GTK_MESSAGE_DIALOG(app->dialog),
-    app->secondaryTextFormat, app->countdownTimerTime
+    app->secondaryTextFormat, app->countdownLength
   );
 
   return true;

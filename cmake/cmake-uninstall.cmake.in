@@ -4,20 +4,45 @@ if(NOT EXISTS "@CMAKE_BINARY_DIR@/install_manifest.txt")
   message(FATAL_ERROR "Cannot find install manifest: @CMAKE_BINARY_DIR@/install_manifest.txt")
 endif()
 
+set(_install_schema_dir "")
+
 file(READ "@CMAKE_BINARY_DIR@/install_manifest.txt" files)
 string(REGEX REPLACE "\n" ";" files "${files}")
 foreach(file ${files})
-  message(STATUS "Uninstalling $ENV{DESTDIR}${file}")
-  if(IS_SYMLINK "$ENV{DESTDIR}${file}" OR EXISTS "$ENV{DESTDIR}${file}")
-    exec_program(
-      "@CMAKE_COMMAND@" ARGS "-E remove \"$ENV{DESTDIR}${file}\""
+  set(file_path "$ENV{DESTDIR}${file}")
+  message(STATUS "Uninstalling ${file_path}")
+  if(IS_SYMLINK "${file_path}" OR EXISTS "${file_path}")
+    execute_process(
+      COMMAND "@CMAKE_COMMAND@" ARGS "-E remove \"${file_path}\""
       OUTPUT_VARIABLE rm_out
       RETURN_VALUE rm_retval
       )
     if(NOT "${rm_retval}" STREQUAL 0)
-      message(FATAL_ERROR "Problem when removing $ENV{DESTDIR}${file}")
+      message(FATAL_ERROR "Problem when removing ${file_path}")
     endif()
-  else(IS_SYMLINK "$ENV{DESTDIR}${file}" OR EXISTS "$ENV{DESTDIR}${file}")
-    message(STATUS "File $ENV{DESTDIR}${file} does not exist.")
+  else()
+    message(STATUS "File ${file_path} does not exist.")
+  endif()
+
+  get_filename_component(file_name "${file_path}" NAME)
+  if("${file_name}" STREQUAL "@_shutdown_menu_application_id@.gschema.xml")
+    get_filename_component(_install_schema_dir "${file_path}" DIRECTORY)
   endif()
 endforeach()
+
+# custom extension to the original file for removing the schema from cache
+set(_glib_compile_schemas "@_glib_compile_schemas@")
+if(_glib_compile_schemas AND EXISTS "${_install_schema_dir}")
+  execute_process(
+    COMMAND "${_glib_compile_schemas}" --strict "${_install_schema_dir}"
+    # COMMAND_ECHO STDOUT
+    RESULT_VARIABLE _compilation_result
+    OUTPUT_VARIABLE _compilation_output
+    ERROR_VARIABLE _compilation_output
+  )
+  if(NOT _compilation_result EQUAL 0)
+    message(FATAL_ERROR "glib-compile-schemas exited with non-zero exit code ${_compilation_result} and the following output:\n${_compilation_output}")
+  else()
+    message(STATUS "Updated gschema cache in ${_install_schema_dir}.")
+  endif()
+endif()

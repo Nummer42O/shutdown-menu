@@ -1,0 +1,24 @@
+set(_glib_compile_schemas "@_glib_compile_schemas@")
+if (NOT _glib_compile_schemas)
+  message(WARNING "glib-compile-schemas not found, skipping schema compilation.")
+  return()
+endif()
+
+set(_install_full_schema_dir "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/@_install_schema_dir@")
+set(_shutdown_menu_installed_schema_xml "${_install_full_schema_dir}/@_shutdown_menu_application_id@.gschema.xml")
+if(NOT EXISTS "${_shutdown_menu_installed_schema_xml}")
+  message(FATAL_ERROR "Missing schema file @_shutdown_menu_application_id@.gschema.xml in ${_install_full_schema_dir}.")
+endif()
+
+execute_process(
+  COMMAND "${_glib_compile_schemas}" --strict "${_install_full_schema_dir}"
+  # COMMAND_ECHO STDOUT
+  RESULT_VARIABLE _compilation_result
+  OUTPUT_VARIABLE _compilation_output
+  ERROR_VARIABLE _compilation_output
+)
+if(_compilation_result GREATER 0)
+  message(FATAL_ERROR "glib-compile-schemas exited with non-zero exit code ${_compilation_result} and the following output:\n${_compilation_output}")
+else()
+  message(STATUS "Updated gschema cache in ${_install_full_schema_dir}.")
+endif()

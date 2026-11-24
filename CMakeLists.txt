@@ -33,21 +33,22 @@ endif()
 
 ## derived variables
 
-string(REPLACE "." "/" _application_id_path "${SHUTDOWN_MENU_APPLICATION_ID}")
-set(_application_id_path "/${_application_id_path}/")
-set(_application_id "${SHUTDOWN_MENU_APPLICATION_ID}")
+string(REPLACE "." "/" _shutdown_menu_application_id_path "${SHUTDOWN_MENU_APPLICATION_ID}")
+set(_shutdown_menu_application_id_path "/${_shutdown_menu_application_id_path}/")
+set(_shutdown_menu_application_id "${SHUTDOWN_MENU_APPLICATION_ID}")
 
-set(_shutdown_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu")
+set(_shutdown_menu_command_location "${CMAKE_INSTALL_FULL_BINDIR}/shutdown-menu")
 set(_shutdown_menu_keybind_helper "${CMAKE_BINARY_DIR}/shutdown-menu-keybind")
 
 # Keep the schema paths defined even when glib-compile-schemas is unavailable;
 # tests use them and skip schema-specific checks independently.
-set(_shutdown_menu_schema_dir "${CMAKE_BINARY_DIR}/schemas")
+set(_shutdown_menu_schema_dir "${CMAKE_BINARY_DIR}/schemas/")
+set(_install_schema_dir "${CMAKE_INSTALL_DATADIR}/glib-2.0/schemas/")
 set(_shutdown_menu_schema_file "${_shutdown_menu_schema_dir}/shutdown-menu.gschema.xml")
 
-set(_gresource_xml_in_file "${CMAKE_SOURCE_DIR}/cmake/shutdown-menu.gresource.xml.in")
-set(_gresource_xml_file "${CMAKE_BINARY_DIR}/shutdown-menu.gresource.xml")
-set(_gresource_c_file "${CMAKE_BINARY_DIR}/generated/shutdown-menu.gresource.c")
+set(_shutdown_menu_gresource_xml_in_file "${CMAKE_SOURCE_DIR}/cmake/shutdown-menu.gresource.xml.in")
+set(_shutdown_menu_gresource_xml_file "${CMAKE_BINARY_DIR}/shutdown-menu.gresource.xml")
+set(_shutdown_menu_gresource_c_file "${CMAKE_BINARY_DIR}/generated/shutdown-menu.gresource.c")
 
 ## packages and host tools
 
@@ -73,8 +74,8 @@ file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
 ## GResource
 
 configure_file(
-  "${_gresource_xml_in_file}"
-  "${_gresource_xml_file}"
+  "${_shutdown_menu_gresource_xml_in_file}"
+  "${_shutdown_menu_gresource_xml_file}"
   @ONLY
 )
 
@@ -82,12 +83,12 @@ execute_process(
   COMMAND "${_glib_compile_resources}"
     --generate-dependencies
     --sourcedir "${CMAKE_SOURCE_DIR}/resources"
-    "${_gresource_xml_file}"
+    "${_shutdown_menu_gresource_xml_file}"
   OUTPUT_VARIABLE _gresource_dependencies
   RESULT_VARIABLE _gresource_dependencies_result
 )
 if(NOT _gresource_dependencies_result EQUAL 0)
-  message(FATAL_ERROR "Unable to generate GResource dependencies for ${_gresource_xml_file}")
+  message(FATAL_ERROR "Unable to generate GResource dependencies for ${_shutdown_menu_gresource_xml_file}")
 endif()
 # convert newline separated string into valid CMake list
 string(REPLACE "\n" ";" _gresource_dependencies "${_gresource_dependencies}")
@@ -95,21 +96,21 @@ string(REPLACE "\n" ";" _gresource_dependencies "${_gresource_dependencies}")
 list(POP_BACK _gresource_dependencies)
 
 add_custom_command(
-  OUTPUT "${_gresource_c_file}"
+  OUTPUT "${_shutdown_menu_gresource_c_file}"
   COMMAND "${_glib_compile_resources}"
   ARGS
     --generate-source
     --sourcedir "${CMAKE_SOURCE_DIR}/resources"
-    --target "${_gresource_c_file}"
+    --target "${_shutdown_menu_gresource_c_file}"
     --c-name shutdown_menu_
     --internal
-    "${_gresource_xml_file}"
+    "${_shutdown_menu_gresource_xml_file}"
   VERBATIM
-  MAIN_DEPENDENCY "${_gresource_xml_file}"
+  MAIN_DEPENDENCY "${_shutdown_menu_gresource_xml_file}"
   DEPENDS "${_gresource_dependencies}"
 )
 add_custom_target(shutdown-menu-gresource
-  DEPENDS "${_gresource_c_file}"
+  DEPENDS "${_shutdown_menu_gresource_c_file}"
 )
 
 ## keybind helper
@@ -137,7 +138,7 @@ if(_glib_compile_schemas)
     COMMENT "Compiling GSettings schemas"
     VERBATIM
   )
-  add_custom_target(shutdown-menu-schemas ALL
+  add_custom_target(shutdown-menu-schemas
     DEPENDS "${_shutdown_menu_schema_dir}/gschemas.compiled"
   )
 else()
@@ -152,7 +153,7 @@ endif()
 add_executable(shutdown-menu)
 target_sources(shutdown-menu
   PRIVATE
-    "${_gresource_c_file}"
+    "${_shutdown_menu_gresource_c_file}"
 )
 add_subdirectory(src)
 target_include_directories(shutdown-menu
@@ -165,11 +166,14 @@ target_link_libraries(shutdown-menu
 )
 target_compile_definitions(shutdown-menu
   PRIVATE
-    SHUTDOWN_MENU_APPLICATION_ID="${_application_id}"
-    SHUTDOWN_MENU_APPLICATION_ID_PATH="${_application_id_path}"
+    SHUTDOWN_MENU_APPLICATION_ID="${_shutdown_menu_application_id}"
+    SHUTDOWN_MENU_APPLICATION_ID_PATH="${_shutdown_menu_application_id_path}"
     _GNU_SOURCE
 )
-add_dependencies(shutdown-menu shutdown-menu-gresource)
+add_dependencies(shutdown-menu
+  shutdown-menu-gresource
+  shutdown-menu-schemas
+)
 
 # tests
 
@@ -218,13 +222,24 @@ add_custom_target(purge-keybinds
 install(
   TARGETS shutdown-menu
   RUNTIME
-    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 install(
   FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/48x48/apps/"
   RENAME shutdown-menu.png
 )
+install(
+  FILES "${_shutdown_menu_schema_file}"
+  DESTINATION "${_install_schema_dir}"
+  RENAME "${_shutdown_menu_application_id}.gschema.xml"
+)
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/compile-installed-schema.cmake.in"
+  "${CMAKE_BINARY_DIR}/compile-installed-schema.cmake"
+  IMMEDIATE @ONLY
+)
+install(SCRIPT "${CMAKE_BINARY_DIR}/compile-installed-schema.cmake")
 
 ## uninstall
 

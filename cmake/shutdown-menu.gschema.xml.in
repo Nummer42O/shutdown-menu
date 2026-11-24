@@ -1,21 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="shutdown-menu">
-	<schema id="@_application_id@" path="@_application_id_path@">
-    <key name="timeout-length" type="i">
-      <summary>Seconds until timeout</summary>
+  <enum id="@_shutdown_menu_application_id@.theme-options">
+    <value nick="automatic" value="0" />
+    <value nick="light"     value="1" />
+    <value nick="dark"      value="2" />
+  </enum>
+	<schema id="@_shutdown_menu_application_id@" path="@_shutdown_menu_application_id_path@">
+    <key name="countdown-length" type="u">
+      <summary>Seconds until timeout.</summary>
       <description>The ammount of seconds that need to count down before the default action gets applied.</description>
-      <range min='10'/>
+      <range min='1'/>
       <default>60</default>
     </key>
-    <key name="timeout-interval" type="i">
-      <summary>Seconds between countdown updates</summary>
+    <key name="countdown-update-interval" type="u">
+      <summary>Seconds between countdown updates.</summary>
       <description>The ammount of seconds it takes to update the displayed remaining timer value.</description>
       <range min='1'/>
       <default>10</default>
     </key>
-    <key name="grace-period" type="i">
-      <range min='0'/>
-      <default>0</default>
+    <key name="theme" enum="@_shutdown_menu_application_id@.theme-options">
+      <summary>The theme of the Dialog.</summary>
+      <description>Whether a predetermined theme is to be used or the theming is to be derived from the OS.</description>
+      <default>'automatic'</default>
+    </key>
+    <key name="dialog-monitor" type="s">
+      <summary>Which monitor to select.</summary>
+      <description>The monitor to display the dialog on. May be 'primary', 'auto' or any monitor recognized by RandR (e.g. 'HDMI-0' or `DP-5`).</description>
+      <default>"primary"</default>
+    </key>
+    <key name="dim-all-monitors" type="b">
+      <summary>Dim all or dialog monitor.</summary>
+      <description>Whether to dim all monitors or just the one on which the dialog window is displayed.</description>
+      <default>true</default>
     </key>
 	</schema>
 </schemalist>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- reference: https://docs.gtk.org/gio/struct.Resource.html#description -->
 <gresources>
-  <gresource prefix="@_application_id_path@">
+  <gresource prefix="@_shutdown_menu_application_id_path@">
     <file>stylesheet.css</file>
   </gresource>
 </gresources>

@@ -86,17 +86,17 @@ passes. Integration tests either pass or skip with status 77.
   use a GResource (preferred) or a runtime search through the system data
   directories; do not embed a build-tree path.
 - [X] Add the keybind helper as a CMake custom target.
-- [ ] Install the schema to `${DATADIR}/glib-2.0/schemas`; run
-  `glib-compile-schemas --strict` at install time (respect `DESTDIR`).
-- [ ] Add a matching `.desktop` file and application name:
-  `io.github.Nummer42O.ShutdownMenu.desktop`, `Icon=shutdown-menu`.
-- [ ] Add GSettings keys:
+- [x] Add GSettings keys:
   `countdown-seconds`, `countdown-update-interval`, `theme` (auto/light/dark),
   `dialog-monitor` (connector or auto), and optionally
   `dim-all-monitors`.
-- [ ] Load settings defensively: use defaults when the schema is unavailable;
+- [x] Load settings defensively: use defaults when the schema is unavailable;
   keep CLI overrides (`--restart`, `--grace-period`) authoritative.
-- [ ] Document `GSETTINGS_SCHEMA_DIR` for development and install.
+- [x] Document `GSETTINGS_SCHEMA_DIR` for development and install.
+- [x] Install the schema to `${DATADIR}/glib-2.0/schemas`; run
+  `glib-compile-schemas --strict` at install time (respect `DESTDIR`).
+- [ ] Add a matching `.desktop` file and application name:
+  `io.github.Nummer42O.ShutdownMenu.desktop`, `Icon=shutdown-menu`.
 
 Acceptance: installable Debug/Release builds; no build-tree paths in the
 installed binary; schema validates and installs; the app starts with or without
@@ -234,7 +234,22 @@ a missing rule or denied request reports `AccessDenied` without prompting; no
 idempotent and does not leave duplicates.
 
 ## Phase 6 - postponed tasks
-- [ ] remove build_install, instead create a "prod" repo in /usr/local/src/
+- [ ] Remove build_install, instead create a "prod" repo in /usr/local/src/.
+- [ ] Add gettext/l10n support for application UI strings and the GSettings
+  schema, including build integration and translation files.
+- [ ] Add a script that generates a corresponding header for geschema files.
+  - [ ] Create enums and flag enums.
+  - [ ] Create "settings" struct with all fields.
+  - [ ] Make names prefix-able.
+  - [ ] Choices as `static` string array
+  - [ ] `static const` default values.
+  - [ ] Utility functions to load/unload.
+  - open questions:
+    - name conversions from xml to allowed c variable/enum/struct names
+    - struct or GObject?
+    - getter/setter for range checks?
+    - how to handle error cases? ignore or fail?
+- [ ] Extend keybind helper script to also install `Alt-Shift-F3` for default rebooot.
 
 ## Phase X - documentation, CI, release
 

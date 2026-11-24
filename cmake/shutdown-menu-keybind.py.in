@@ -32,7 +32,7 @@ class MenuKeybinder:
     DEFAULT_BINDING         = "<Alt>F3";
     DEFAULT_NAME            = "Shutdown Menu"
     # NOTE: this gets set by cmake
-    DEFAULT_COMMAND         = "@_shutdown_command_location@";
+    DEFAULT_COMMAND         = "@_shutdown_menu_command_location@";
 
     # argparse stuff
     HandlerOptions          = typing.Literal["abort", "disable", "override"];
